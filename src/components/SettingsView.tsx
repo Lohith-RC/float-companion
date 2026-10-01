@@ -19,6 +19,7 @@ export const SettingsView: FC<SettingsViewProps> = ({ settings, onUpdate, onClos
   const [blacklist, setBlacklist] = useState(settings.distractionBlacklist || []);
   const [newKeyword, setNewKeyword] = useState('');
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [confirmPurge, setConfirmPurge] = useState(false);
 
   // Hydrate credentials from Windows DPAPI hardware vault if available
   useEffect(() => {
@@ -45,16 +46,6 @@ export const SettingsView: FC<SettingsViewProps> = ({ settings, onUpdate, onClos
     sounds.setEnabled(soundEnabled);
     await saveSettings(updated);
 
-    // Synchronize to hardware encrypted DPAPI vault
-    if (window.electronAPI?.store?.setSecureKey) {
-      try {
-        await window.electronAPI.store.setSecureKey('groq', cleanGroq);
-        await window.electronAPI.store.setSecureKey('gemini', cleanGemini);
-      } catch (err) {
-        console.error('Failed to write to DPAPI vault', err);
-      }
-    }
-
     onUpdate(updated);
     if (soundEnabled) sounds.playChime();
     setSavedSuccess(true);
@@ -77,16 +68,19 @@ export const SettingsView: FC<SettingsViewProps> = ({ settings, onUpdate, onClos
   };
 
   const handlePurge = async () => {
-    if (confirm('Are you sure you want to delete all saved chats, tasks, and settings? This cannot be undone.')) {
-      await purgeAllData();
-      if (window.electronAPI?.store?.setSecureKey) {
-        await window.electronAPI.store.setSecureKey('groq', '');
-        await window.electronAPI.store.setSecureKey('gemini', '');
-      }
-      sounds.playAlert();
-      useToastStore.getState().showToast('All local and vault data wiped cleanly.', 'info');
-      setTimeout(() => window.location.reload(), 500);
+    if (!confirmPurge) {
+      setConfirmPurge(true);
+      setTimeout(() => setConfirmPurge(false), 4000);
+      return;
     }
+    await purgeAllData();
+    if (window.electronAPI?.store?.setSecureKey) {
+      await window.electronAPI.store.setSecureKey('groq', '');
+      await window.electronAPI.store.setSecureKey('gemini', '');
+    }
+    sounds.playAlert();
+    useToastStore.getState().showToast('All local and vault data wiped cleanly.', 'info');
+    setTimeout(() => window.location.reload(), 500);
   };
 
   return (
@@ -264,10 +258,14 @@ export const SettingsView: FC<SettingsViewProps> = ({ settings, onUpdate, onClos
         <div className="pt-2 flex justify-between items-center text-[11px]">
           <button
             onClick={handlePurge}
-            className="flex items-center gap-1.5 text-red-400 hover:text-red-300 hover:underline transition-colors"
+            className={`flex items-center gap-1.5 transition-all px-2.5 py-1 rounded-lg ${
+              confirmPurge
+                ? 'bg-red-500/20 text-red-300 border border-red-500/40 font-semibold animate-pulse shadow-sm'
+                : 'text-red-400 hover:text-red-300 hover:bg-red-500/10'
+            }`}
           >
             <Trash2 className="w-3.5 h-3.5" />
-            <span>Purge Local Data</span>
+            <span>{confirmPurge ? '⚠️ Click Again to Confirm Wipe' : 'Purge Local Data'}</span>
           </button>
         </div>
       </div>

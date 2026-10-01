@@ -10,7 +10,7 @@ const path = require('path');
 class SecureStore {
   constructor() {
     this.storePath = path.join(app.getPath('userData'), 'vault.dat');
-    this.cache = {};
+    this.cache = Object.create(null);
     this.load();
   }
 
@@ -18,16 +18,18 @@ class SecureStore {
     try {
       if (fs.existsSync(this.storePath)) {
         const raw = fs.readFileSync(this.storePath);
+        let parsed = {};
         if (safeStorage.isEncryptionAvailable()) {
           const decrypted = safeStorage.decryptString(raw);
-          this.cache = JSON.parse(decrypted);
+          parsed = JSON.parse(decrypted);
         } else {
-          this.cache = JSON.parse(raw.toString('utf-8'));
+          parsed = JSON.parse(raw.toString('utf-8'));
         }
+        this.cache = Object.assign(Object.create(null), parsed);
       }
     } catch (err) {
       console.warn('Secure store load warning:', err.message);
-      this.cache = {};
+      this.cache = Object.create(null);
     }
   }
 
@@ -51,10 +53,12 @@ class SecureStore {
   }
 
   get(key) {
+    if (!key || key === '__proto__' || key === 'constructor' || key === 'prototype') return null;
     return this.cache[key] || null;
   }
 
   set(key, value) {
+    if (!key || key === '__proto__' || key === 'constructor' || key === 'prototype') return false;
     this.cache[key] = value;
     return this.save();
   }

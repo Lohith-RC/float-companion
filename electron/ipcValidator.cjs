@@ -64,11 +64,44 @@ function validateSecureKeyPayload(payload) {
     return { valid: false, error: 'Key payload must be an object' };
   }
   const { keyName, keyValue } = payload;
-  if (!keyName || typeof keyName !== 'string' || !/^[a-zA-Z0-9_\-]{1,32}$/.test(keyName)) {
-    return { valid: false, error: 'Invalid keyName format (alphanumeric, max 32 chars)' };
+  const DANGEROUS_KEYS = ['__proto__', 'constructor', 'prototype'];
+  if (
+    !keyName ||
+    typeof keyName !== 'string' ||
+    !/^[a-zA-Z0-9_\-]{1,32}$/.test(keyName) ||
+    DANGEROUS_KEYS.includes(keyName.toLowerCase())
+  ) {
+    return { valid: false, error: 'Invalid or prohibited keyName format' };
   }
   if (keyValue !== undefined && (typeof keyValue !== 'string' || keyValue.length > 1024)) {
     return { valid: false, error: 'keyValue exceeds maximum length of 1024 chars' };
+  }
+  return { valid: true };
+}
+
+/**
+ * Validates background text typing payloads
+ */
+function validateTypeTextPayload(payload) {
+  if (!isObject(payload)) {
+    return { valid: false, error: 'typeText payload must be an object' };
+  }
+  const { text, delayMs } = payload;
+  if (typeof text !== 'string' || text.length === 0 || text.length > 20000) {
+    return { valid: false, error: 'text must be non-empty string under 20,000 characters' };
+  }
+  if (delayMs !== undefined && (typeof delayMs !== 'number' || delayMs < 0 || delayMs > 5000)) {
+    return { valid: false, error: 'delayMs must be number between 0 and 5000' };
+  }
+  return { valid: true };
+}
+
+/**
+ * Validates mouse event ignoring payloads
+ */
+function validateIgnoreMousePayload(payload) {
+  if (!isObject(payload)) {
+    return { valid: false, error: 'ignoreMouse payload must be an object' };
   }
   return { valid: true };
 }
@@ -77,4 +110,6 @@ module.exports = {
   validateResizePayload,
   validateFocusSessionPayload,
   validateSecureKeyPayload,
+  validateTypeTextPayload,
+  validateIgnoreMousePayload,
 };

@@ -245,8 +245,9 @@ ipcMain.handle('window:resize', (_event, payload) => {
   };
 });
 
-ipcMain.handle('window:set-ignore-mouse', (_event, { ignore, forward }) => {
+ipcMain.handle('window:set-ignore-mouse', (_event, payload) => {
   if (!mainWindow) return { success: false };
+  const { ignore, forward } = payload || {};
   mainWindow.setIgnoreMouseEvents(Boolean(ignore), { forward: Boolean(forward) });
   return { success: true };
 });

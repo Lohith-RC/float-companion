@@ -143,18 +143,26 @@ export const ScreenCanvas: FC<ScreenCanvasProps> = ({ onClose }) => {
         </button>
 
         {/* Color presets */}
-        <div className="flex items-center gap-1.5 px-2 border-l border-r border-white/10">
-          {['#38bdf8', '#ef4444', '#10b981', '#f59e0b', '#ffffff'].map((c) => (
+        <div className="flex items-center gap-1.5 px-2 border-l border-r border-white/10" role="group" aria-label="Drawing color options">
+          {[
+            { hex: '#38bdf8', label: 'Sky Blue' },
+            { hex: '#ef4444', label: 'Crimson Red' },
+            { hex: '#10b981', label: 'Emerald Green' },
+            { hex: '#f59e0b', label: 'Amber' },
+            { hex: '#ffffff', label: 'White' },
+          ].map(({ hex, label }) => (
             <button
-              key={c}
+              key={hex}
+              type="button"
               onClick={() => {
-                setColor(c);
+                setColor(hex);
                 sounds.playClick();
               }}
-              className={`w-3.5 h-3.5 rounded-full transition-transform ${
-                color === c ? 'scale-125 ring-2 ring-white/70 shadow-sm' : 'opacity-70 hover:opacity-100'
+              aria-label={`Select ${label} color`}
+              className={`w-3.5 h-3.5 rounded-full transition-transform focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:outline-none ${
+                color === hex ? 'scale-125 ring-2 ring-white/70 shadow-sm' : 'opacity-70 hover:opacity-100'
               }`}
-              style={{ backgroundColor: c }}
+              style={{ backgroundColor: hex }}
             />
           ))}
         </div>

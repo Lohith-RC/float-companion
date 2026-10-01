@@ -53,17 +53,23 @@ function renderFormattedContent(rawText: string) {
       } else if (matchStr.startsWith('[') && matchStr.includes('](')) {
         const linkMatch = matchStr.match(/\[([^\]]+)\]\(([^)]+)\)/);
         if (linkMatch) {
-          tokens.push(
-            <a
-              key={`${lineIdx}-${match.index}`}
-              href={linkMatch[2]}
-              target="_blank"
-              rel="noreferrer"
-              className="text-sky-400 hover:text-sky-300 underline font-medium"
-            >
-              {linkMatch[1]}
-            </a>
-          );
+          const rawUrl = linkMatch[2].trim();
+          const isSafeUrl = rawUrl.startsWith('https://') || rawUrl.startsWith('http://');
+          if (isSafeUrl) {
+            tokens.push(
+              <a
+                key={`${lineIdx}-${match.index}`}
+                href={rawUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="text-sky-400 hover:text-sky-300 underline font-medium"
+              >
+                {linkMatch[1]}
+              </a>
+            );
+          } else {
+            tokens.push(linkMatch[1]);
+          }
         }
       }
       lastIndex = regex.lastIndex;

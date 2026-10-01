@@ -184,9 +184,18 @@ export class AIOrchestrator {
   ): Promise<void> {
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse`;
 
-    const contents = messages.map((m, index) => {
-      const isLast = index === messages.length - 1;
-      const parts: Array<Record<string, unknown>> = [{ text: m.content }];
+    // Extract system prompt into official Gemini systemInstruction
+    const systemMsg = messages.find((m) => m.role === 'system');
+    const conversationMessages = messages.filter((m) => m.role !== 'system');
+
+    // Build normalized alternating turns for Gemini
+    const contents: Array<{ role: 'user' | 'model'; parts: Array<Record<string, unknown>> }> = [];
+
+    conversationMessages.forEach((m, index) => {
+      const isLast = index === conversationMessages.length - 1;
+      const role: 'user' | 'model' = m.role === 'assistant' ? 'model' : 'user';
+      const parts: Array<Record<string, unknown>> = [{ text: m.content || ' ' }];
+
       if (isLast && imageAttachment) {
         parts.unshift({
           inlineData: {
@@ -195,11 +204,21 @@ export class AIOrchestrator {
           },
         });
       }
-      return {
-        role: m.role === 'assistant' ? 'model' : 'user',
-        parts,
-      };
+
+      // Strictly alternate roles for Gemini API (merge adjacent turns of same role)
+      if (contents.length > 0 && contents[contents.length - 1].role === role) {
+        contents[contents.length - 1].parts.push(...parts);
+      } else {
+        contents.push({ role, parts });
+      }
     });
+
+    const requestBody: Record<string, unknown> = { contents };
+    if (systemMsg?.content?.trim()) {
+      requestBody.systemInstruction = {
+        parts: [{ text: systemMsg.content.trim() }],
+      };
+    }
 
     const response = await fetch(endpoint, {
       method: 'POST',
@@ -207,7 +226,7 @@ export class AIOrchestrator {
         'Content-Type': 'application/json',
         'x-goog-api-key': apiKey,
       },
-      body: JSON.stringify({ contents }),
+      body: JSON.stringify(requestBody),
       signal,
     });
 

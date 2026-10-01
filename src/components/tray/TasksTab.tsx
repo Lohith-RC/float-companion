@@ -1,5 +1,5 @@
 import { FC, useState } from 'react';
-import { Check, Trash2 } from 'lucide-react';
+import { Check, Trash2, Play } from 'lucide-react';
 import { TaskItem } from '../../store/useAppStore';
 
 interface TasksTabProps {
@@ -7,6 +7,7 @@ interface TasksTabProps {
   onToggleTask: (id: string) => void;
   onAddTask: (title: string) => void;
   onRemoveTask: (id: string) => void;
+  onStartFocus?: (durationMins: number, taskTitle: string) => void;
 }
 
 /**
@@ -18,6 +19,7 @@ export const TasksTab: FC<TasksTabProps> = ({
   onToggleTask,
   onAddTask,
   onRemoveTask,
+  onStartFocus,
 }) => {
   const [newTaskTitle, setNewTaskTitle] = useState('');
 
@@ -127,6 +129,17 @@ export const TasksTab: FC<TasksTabProps> = ({
 
             <div className="flex items-center gap-2">
               <span className="text-[10px] text-slate-500 font-tabular font-medium">{task.durationMins}m</span>
+              {onStartFocus && !task.completed && (
+                <button
+                  type="button"
+                  onClick={() => onStartFocus(task.durationMins || 25, task.title)}
+                  className="opacity-0 group-hover:opacity-100 p-1 text-slate-500 hover:text-amber-400 transition-opacity focus:opacity-100 focus-visible:ring-1 focus-visible:ring-amber-400 focus-visible:outline-none"
+                  title={`Start focus sprint for "${task.title}"`}
+                  aria-label={`Start focus sprint for "${task.title}"`}
+                >
+                  <Play className="w-3 h-3 fill-current" />
+                </button>
+              )}
               <button
                 onClick={() => onRemoveTask(task.id)}
                 className="opacity-0 group-hover:opacity-100 p-1 text-slate-500 hover:text-red-400 transition-opacity focus:opacity-100 focus-visible:ring-1 focus-visible:ring-red-400 focus-visible:outline-none"

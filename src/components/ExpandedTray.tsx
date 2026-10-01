@@ -7,6 +7,7 @@ import { orchestrator, ImageAttachment } from '../ai/orchestrator';
 import { sounds } from '../services/soundEffects';
 import {
   UserSettings,
+  defaultSettings,
   loadSettings,
   saveMessages,
   saveTasks,
@@ -78,11 +79,11 @@ export const ExpandedTray: FC<ExpandedTrayProps> = ({ onCollapse, onOpenCanvas }
   }, []);
 
   useEffect(() => {
-    if (messages.length > 0) saveMessages(messages);
+    saveMessages(messages);
   }, [messages]);
 
   useEffect(() => {
-    if (tasks.length > 0) saveTasks(tasks);
+    saveTasks(tasks);
   }, [tasks]);
 
   useEffect(() => {
@@ -149,12 +150,12 @@ export const ExpandedTray: FC<ExpandedTrayProps> = ({ onCollapse, onOpenCanvas }
         }
       }
 
-      if (!userSettings) return;
+      const activeSettings = userSettings || defaultSettings;
 
       setIsStreaming(true);
       setStreamingContent('');
 
-      await orchestrator.streamPrompt(effectivePrompt, messages, userSettings, {
+      await orchestrator.streamPrompt(effectivePrompt, messages, activeSettings, {
         onChunk: (chunkText) => {
           setStreamingContent(chunkText);
         },
@@ -289,6 +290,14 @@ export const ExpandedTray: FC<ExpandedTrayProps> = ({ onCollapse, onOpenCanvas }
               onToggleTask={toggleTask}
               onAddTask={addTask}
               onRemoveTask={removeTask}
+              onStartFocus={(dur, taskTitle) => {
+                startFocus(dur, taskTitle);
+                setActiveTab('focus');
+                sounds.playChime();
+                if (window.electronAPI?.focus?.start) {
+                  window.electronAPI.focus.start(dur, taskTitle);
+                }
+              }}
             />
           )}
 

@@ -107,20 +107,24 @@ class SoundEngine {
 
     // Second pulse
     setTimeout(() => {
-      const c = this.getContext();
-      if (!c) return;
-      const t = c.currentTime;
-      const o2 = c.createOscillator();
-      const g2 = c.createGain();
-      o2.type = 'sawtooth';
-      o2.frequency.setValueAtTime(440, t);
-      o2.frequency.exponentialRampToValueAtTime(220, t + 0.18);
-      g2.gain.setValueAtTime(0.2, t);
-      g2.gain.exponentialRampToValueAtTime(0.01, t + 0.25);
-      o2.connect(g2);
-      g2.connect(c.destination);
-      o2.start(t);
-      o2.stop(t + 0.25);
+      try {
+        const c = this.getContext();
+        if (!c) return;
+        const t = c.currentTime;
+        const o2 = c.createOscillator();
+        const g2 = c.createGain();
+        o2.type = 'sawtooth';
+        o2.frequency.setValueAtTime(440, t);
+        o2.frequency.exponentialRampToValueAtTime(220, t + 0.18);
+        g2.gain.setValueAtTime(0.2, t);
+        g2.gain.exponentialRampToValueAtTime(0.01, t + 0.25);
+        o2.connect(g2);
+        g2.connect(c.destination);
+        o2.start(t);
+        o2.stop(t + 0.25);
+      } catch {
+        // AudioContext suspended or unavailable
+      }
     }, 180);
   }
 

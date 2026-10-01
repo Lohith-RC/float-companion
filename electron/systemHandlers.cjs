@@ -2,7 +2,7 @@ const { ipcMain, screen, desktopCapturer, clipboard } = require('electron');
 const { exec } = require('child_process');
 const os = require('os');
 const { validateCommand } = require('./securityKernel.cjs');
-const { validateFocusSessionPayload } = require('./ipcValidator.cjs');
+const { validateFocusSessionPayload, validateTypeTextPayload } = require('./ipcValidator.cjs');
 
 let focusInterval = null;
 let cachedStorageInfo = null;
@@ -133,9 +133,11 @@ function registerSystemHandlers(getMainWindow) {
   });
 
   // 3. Background Typing Channel
-  ipcMain.handle('os:type-text', async (_event, { text, delayMs = 150 }) => {
-    if (!text) return { success: false, error: 'Empty text payload' };
+  ipcMain.handle('os:type-text', async (_event, payload) => {
+    const val = validateTypeTextPayload(payload || {});
+    if (!val.valid) return { success: false, error: val.error };
 
+    const { text, delayMs = 150 } = payload;
     clipboard.writeText(text);
 
     const win = getMainWindow();
@@ -145,7 +147,7 @@ function registerSystemHandlers(getMainWindow) {
         exec(`powershell -NoProfile -Command "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SendKeys]::SendWait('^v')"`, (err) => {
           if (err) console.warn('SendKeys warning:', err.message);
         });
-      }, delayMs);
+      }, Math.max(50, Math.min(delayMs, 5000)));
     }
 
     return { success: true };

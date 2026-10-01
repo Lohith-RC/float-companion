@@ -58,11 +58,12 @@ export const ChatInputBar: FC<ChatInputBarProps> = ({
   const [recognition, setRecognition] = useState<SpeechRecognitionInstance | null>(null);
 
   useEffect(() => {
+    let recog: SpeechRecognitionInstance | null = null;
     if (typeof window !== 'undefined') {
       const speechWin = window as unknown as WebkitWindowSpeech;
       const SpeechConstructor = speechWin.SpeechRecognition || speechWin.webkitSpeechRecognition;
       if (SpeechConstructor) {
-        const recog = new SpeechConstructor();
+        recog = new SpeechConstructor();
         recog.continuous = true;
         recog.interimResults = true;
         recog.lang = 'en-US';
@@ -92,6 +93,19 @@ export const ChatInputBar: FC<ChatInputBarProps> = ({
         setRecognition(recog);
       }
     }
+
+    return () => {
+      if (recog) {
+        try {
+          recog.onresult = () => {};
+          recog.onerror = () => {};
+          recog.onend = () => {};
+          recog.stop();
+        } catch {
+          // Ignore
+        }
+      }
+    };
   }, [onChangePrompt]);
 
   const toggleVoiceMode = () => {

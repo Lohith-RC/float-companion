@@ -29,13 +29,13 @@ export async function matchLocalIntent(prompt: string): Promise<RouterResult> {
   }
 
   // 2. Hardware / Memory Stats (Sub-50ms via IPC)
-  if (
+  const isMemoryQuery =
+    /^(?:what\s+is\s+the\s+)?(?:how\s+much\s+)?(?:ram|system\s+memory)(?:\s+(?:is\s+free|in\s+use|usage))?$/i.test(p) ||
     p === 'ram' ||
-    p.includes('ram in use') ||
-    p.includes('memory') ||
-    p.includes('ram usage') ||
-    p.includes('hardware stats')
-  ) {
+    p === 'memory' ||
+    p === 'hardware stats';
+
+  if (isMemoryQuery) {
     if (window.electronAPI?.os?.getStats) {
       try {
         const stats = await window.electronAPI.os.getStats();
@@ -48,6 +48,34 @@ export async function matchLocalIntent(prompt: string): Promise<RouterResult> {
         return {
           handled: true,
           reply: `⚠️ Failed to fetch native hardware stats: ${getErrorMessage(err)}`,
+        };
+      }
+    }
+  }
+
+  // 3. Storage / Disk Drive Telemetry (Sub-50ms via IPC)
+  const isStorageQuery =
+    /^(?:how\s+much\s+)?(?:disk|storage|drive|hard\s+drive)(?:\s+(?:space|is\s+free|usage))?$/i.test(p) ||
+    p === 'disk' ||
+    p === 'storage';
+
+  if (isStorageQuery) {
+    if (window.electronAPI?.os?.getStats) {
+      try {
+        const stats = await window.electronAPI.os.getStats();
+        const primaryDrive = stats.storage?.[0];
+        const driveInfo = primaryDrive
+          ? `\`${primaryDrive.drive}\` — \`${primaryDrive.freeGB} GB\` free of \`${primaryDrive.totalGB} GB\` (\`${primaryDrive.usedGB} GB\` in use)`
+          : 'Storage information unavailable';
+        return {
+          handled: true,
+          action: 'showed_stats',
+          reply: `💾 **Storage Drive Telemetry:**\n- **Primary Disk:** ${driveInfo}\n- **Drives Detected:** ${stats.storage?.length || 1}\n*(Zero-Token Native Hardware Query)*`,
+        };
+      } catch (err: unknown) {
+        return {
+          handled: true,
+          reply: `⚠️ Failed to fetch storage telemetry: ${getErrorMessage(err)}`,
         };
       }
     }

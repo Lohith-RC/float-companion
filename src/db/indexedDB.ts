@@ -57,19 +57,44 @@ export function isValidTask(task: unknown): task is TaskItem {
 export async function loadSettings(): Promise<UserSettings> {
   try {
     const saved = await get<UserSettings>(SETTINGS_KEY);
-    return { ...defaultSettings, ...(saved || {}) };
+    const settings: UserSettings = { ...defaultSettings, ...(saved || {}) };
+
+    // If running in Electron with hardware DPAPI vault, hydrate credentials from vault
+    if (typeof window !== 'undefined' && window.electronAPI?.store?.getSecureKey) {
+      try {
+        const groq = await window.electronAPI.store.getSecureKey('groq');
+        if (groq?.key) settings.groqKey = groq.key;
+        const gemini = await window.electronAPI.store.getSecureKey('gemini');
+        if (gemini?.key) settings.geminiKey = gemini.key;
+      } catch {
+        // Non-fatal
+      }
+    }
+    return settings;
   } catch (err) {
-    console.error('Failed to load settings from IndexedDB:', err);
+    console.error('Failed to load settings:', err);
     return defaultSettings;
   }
 }
 
 export async function saveSettings(settings: UserSettings): Promise<void> {
-  // Defensive validation
+  const isElectronSecure = typeof window !== 'undefined' && Boolean(window.electronAPI?.store?.setSecureKey);
+
+  // If DPAPI hardware vault is available, write keys to vault
+  if (isElectronSecure && window.electronAPI?.store?.setSecureKey) {
+    try {
+      await window.electronAPI.store.setSecureKey('groq', settings.groqKey?.trim() || '');
+      await window.electronAPI.store.setSecureKey('gemini', settings.geminiKey?.trim() || '');
+    } catch (err) {
+      console.error('Failed to persist keys to DPAPI vault:', err);
+    }
+  }
+
+  // Never store plaintext credentials in IndexedDB when DPAPI is active
   const sanitized: UserSettings = {
-    groqKey: typeof settings.groqKey === 'string' ? settings.groqKey.trim() : '',
-    geminiKey: typeof settings.geminiKey === 'string' ? settings.geminiKey.trim() : '',
-    openaiKey: typeof settings.openaiKey === 'string' ? settings.openaiKey.trim() : '',
+    groqKey: isElectronSecure ? '' : (typeof settings.groqKey === 'string' ? settings.groqKey.trim() : ''),
+    geminiKey: isElectronSecure ? '' : (typeof settings.geminiKey === 'string' ? settings.geminiKey.trim() : ''),
+    openaiKey: '',
     defaultModel: settings.defaultModel || 'groq',
     soundEnabled: Boolean(settings.soundEnabled),
     distractionBlacklist: Array.isArray(settings.distractionBlacklist)
