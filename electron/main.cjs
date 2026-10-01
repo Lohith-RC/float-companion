@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, globalShortcut, screen, Tray, Menu, nativeImage, clipboard } = require('electron');
+const { app, BrowserWindow, ipcMain, globalShortcut, screen, Tray, Menu, nativeImage, clipboard, shell, session } = require('electron');
 const path = require('path');
 const { exec } = require('child_process');
 const os = require('os');
@@ -66,6 +66,28 @@ function createMainWindow() {
 
   mainWindow.loadURL(startUrl);
 
+  // Enterprise Security: Intercept external navigation inside the Electron shell
+  mainWindow.webContents.on('will-navigate', (event, navigationUrl) => {
+    try {
+      const parsed = new URL(navigationUrl);
+      const origin = new URL(startUrl).origin;
+      if (parsed.origin !== origin) {
+        event.preventDefault();
+        shell.openExternal(navigationUrl);
+      }
+    } catch {
+      event.preventDefault();
+    }
+  });
+
+  // Enterprise Security: Intercept window.open / target="_blank" and open safely in external system browser
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    if (url.startsWith('https:') || url.startsWith('http:')) {
+      shell.openExternal(url);
+    }
+    return { action: 'deny' };
+  });
+
   // Set window level to float seamlessly over normal applications
   mainWindow.setAlwaysOnTop(true, 'screen-saver');
 
@@ -128,6 +150,11 @@ function toggleWindowMode() {
 app.whenReady().then(() => {
   secureStore = new SecureStore();
   createMainWindow();
+
+  // Deny all unnecessary ambient permissions (camera, microphone, geolocation)
+  session.defaultSession.setPermissionRequestHandler((_webContents, _permission, callback) => {
+    callback(false);
+  });
 
   // Global Summon Hotkey: Ctrl+Shift+Space
   globalShortcut.register('CommandOrControl+Shift+Space', () => {
