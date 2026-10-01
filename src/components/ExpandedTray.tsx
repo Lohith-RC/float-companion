@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { FC, useState, useRef, useEffect } from 'react';
 import {
   MessageSquare,
   CheckSquare,
@@ -18,7 +18,7 @@ import {
   RotateCw,
   Terminal,
 } from 'lucide-react';
-import { useAppStore, ChatMessage } from '../store/useAppStore';
+import { useAppStore } from '../store/useAppStore';
 import { matchLocalIntent } from '../ai/fastRouter';
 import { orchestrator } from '../ai/orchestrator';
 import { sounds } from '../services/soundEffects';
@@ -36,7 +36,7 @@ interface ExpandedTrayProps {
   onOpenCanvas: () => void;
 }
 
-export const ExpandedTray: React.FC<ExpandedTrayProps> = ({ onCollapse, onOpenCanvas }) => {
+export const ExpandedTray: FC<ExpandedTrayProps> = ({ onCollapse, onOpenCanvas }) => {
   const {
     activeTab,
     setActiveTab,

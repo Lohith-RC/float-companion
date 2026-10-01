@@ -1,4 +1,4 @@
-import React from 'react';
+import { FC } from 'react';
 import { Sparkles, Brain, AlertTriangle } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 
@@ -6,7 +6,7 @@ interface FloatingOrbProps {
   onExpand: () => void;
 }
 
-export const FloatingOrb: React.FC<FloatingOrbProps> = ({ onExpand }) => {
+export const FloatingOrb: FC<FloatingOrbProps> = ({ onExpand }) => {
   const { isFocusing, distractionAlert } = useAppStore();
 
   const isDistracted = Boolean(distractionAlert?.active);

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { FC, useState } from 'react';
 import { X, Key, Volume2, Shield, Trash2, Check, ExternalLink } from 'lucide-react';
 import { UserSettings, saveSettings, purgeAllData } from '../db/indexedDB';
 import { sounds } from '../services/soundEffects';
@@ -9,7 +9,7 @@ interface SettingsViewProps {
   onClose: () => void;
 }
 
-export const SettingsView: React.FC<SettingsViewProps> = ({ settings, onUpdate, onClose }) => {
+export const SettingsView: FC<SettingsViewProps> = ({ settings, onUpdate, onClose }) => {
   const [groqKey, setGroqKey] = useState(settings.groqKey || '');
   const [geminiKey, setGeminiKey] = useState(settings.geminiKey || '');
   const [soundEnabled, setSoundEnabled] = useState(settings.soundEnabled ?? true);

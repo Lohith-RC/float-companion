@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAppStore } from './store/useAppStore';
 import { FloatingOrb } from './components/FloatingOrb';
 import { ExpandedTray } from './components/ExpandedTray';
@@ -41,7 +41,6 @@ export default function App() {
 
     // Keyboard Shortcuts
     const handleKeyDown = (e: KeyboardEvent) => {
-      // 1. Esc to exit canvas or collapse to orb
       if (e.key === 'Escape') {
         if (canvasActive) {
           handleCloseCanvas();
@@ -50,7 +49,6 @@ export default function App() {
         }
       }
 
-      // 2. Ctrl + Shift + C for Screen Canvas
       if (e.ctrlKey && e.shiftKey && (e.key === 'C' || e.key === 'c')) {
         e.preventDefault();
         if (canvasActive) {
@@ -60,7 +58,6 @@ export default function App() {
         }
       }
 
-      // 3. Ctrl + Shift + F for Instant Focus
       if (e.ctrlKey && e.shiftKey && (e.key === 'F' || e.key === 'f')) {
         e.preventDefault();
         if (!isFocusing) {
@@ -101,7 +98,6 @@ export default function App() {
   const handleOpenCanvas = async () => {
     setCanvasActive(true);
     sounds.playChime();
-    // In canvas mode, tell Electron to resize to fullscreen
     if (window.electronAPI?.window?.resize) {
       await window.electronAPI.window.resize('tray', screen.width, screen.height);
     }
@@ -118,10 +114,8 @@ export default function App() {
 
   return (
     <div className="w-screen h-screen flex items-center justify-center p-0.5 select-none bg-transparent">
-      {/* Screen Canvas Overlay */}
       {canvasActive && <ScreenCanvas onClose={handleCloseCanvas} />}
 
-      {/* Main Mode Switching */}
       {mode === 'orb' ? (
         <FloatingOrb onExpand={handleExpand} />
       ) : (

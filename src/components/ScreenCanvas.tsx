@@ -1,11 +1,11 @@
-import React, { useRef, useState, useEffect } from 'react';
+import { FC, useRef, useState, useEffect } from 'react';
 import { Pen, Highlighter, Eraser, RotateCcw, X } from 'lucide-react';
 
 interface ScreenCanvasProps {
   onClose: () => void;
 }
 
-export const ScreenCanvas: React.FC<ScreenCanvasProps> = ({ onClose }) => {
+export const ScreenCanvas: FC<ScreenCanvasProps> = ({ onClose }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [tool, setTool] = useState<'pen' | 'highlighter' | 'eraser'>('pen');
