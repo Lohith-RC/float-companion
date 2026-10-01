@@ -41,14 +41,15 @@ export default function App() {
         const finished = useAppStore.getState().tickFocusSeconds();
         if (finished) {
           sounds.playSuccess();
-          const { activeFocusTask, selectedSprintDuration } = useAppStore.getState();
+          const { activeFocusTask, selectedSprintDuration, sessionDistractionsCount } = useAppStore.getState();
           recordFocusSession({
             id: Date.now().toString(),
             taskTitle: activeFocusTask || 'Focus Sprint',
             durationMins: selectedSprintDuration,
             completedAt: Date.now(),
-            distractionsCaught: 0,
+            distractionsCaught: sessionDistractionsCount || 0,
           });
+          window.electronAPI?.focus?.stop?.();
           useToastStore.getState().showToast('🎉 Focus Sprint Completed!', 'success');
         }
       }, 1000);

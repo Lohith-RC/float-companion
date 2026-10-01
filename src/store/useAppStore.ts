@@ -25,6 +25,7 @@ interface AppState {
   focusSecondsRemaining: number;
   activeFocusTask: string;
   distractionAlert: { active: boolean; title: string; keyword: string } | null;
+  sessionDistractionsCount: number;
 
   setMode: (mode: 'orb' | 'tray') => void;
   setActiveTab: (tab: 'chat' | 'tasks' | 'stats' | 'focus') => void;
@@ -62,6 +63,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   focusSecondsRemaining: 25 * 60,
   activeFocusTask: '',
   distractionAlert: null,
+  sessionDistractionsCount: 0,
 
   setMode: (mode) => set({ mode }),
   setActiveTab: (activeTab) => set({ activeTab }),
@@ -111,6 +113,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       focusSecondsRemaining: dur * 60,
       activeFocusTask: taskTitle,
       distractionAlert: null,
+      sessionDistractionsCount: 0,
     });
   },
   stopFocus: () =>
@@ -118,6 +121,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       isFocusing: false,
       focusSecondsRemaining: state.selectedSprintDuration * 60,
       distractionAlert: null,
+      sessionDistractionsCount: 0,
     })),
   tickFocusSeconds: () => {
     const state = get();
@@ -132,5 +136,11 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ focusSecondsRemaining: state.focusSecondsRemaining - 1 });
     return false;
   },
-  setDistractionAlert: (distractionAlert) => set({ distractionAlert }),
+  setDistractionAlert: (distractionAlert) =>
+    set((state) => ({
+      distractionAlert,
+      sessionDistractionsCount: distractionAlert?.active
+        ? state.sessionDistractionsCount + 1
+        : state.sessionDistractionsCount,
+    })),
 }));

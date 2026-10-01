@@ -66,17 +66,52 @@ export const StatsTab: FC<StatsTabProps> = ({ systemStats, onRefresh }) => {
           </div>
 
           {systemStats.storage && systemStats.storage.length > 0 && (
-            <div className="p-2.5 bg-slate-900/60 rounded-xl border border-white/10 flex items-center justify-between shadow-inner">
-              <div className="flex items-center gap-2">
-                <HardDrive className="w-4 h-4 text-slate-400" aria-hidden="true" />
-                <div>
-                  <span className="text-slate-200 block text-xs font-semibold">Primary Drive ({systemStats.storage[0].drive})</span>
-                  <span className="text-[10px] text-slate-400 font-tabular font-medium">
-                    {systemStats.storage[0].freeGB} GB free of {systemStats.storage[0].totalGB} GB
-                  </span>
-                </div>
-              </div>
-              <span className="text-xs font-tabular text-emerald-400 font-bold">HEALTHY</span>
+            <div className="space-y-2">
+              {systemStats.storage.map((drive) => {
+                const usedGB = Math.max(0, drive.totalGB - drive.freeGB);
+                const percentUsed = drive.totalGB > 0 ? Math.round((usedGB / drive.totalGB) * 100) : 0;
+                return (
+                  <div
+                    key={drive.drive}
+                    className="p-2.5 bg-slate-900/60 rounded-xl border border-white/10 shadow-inner space-y-1.5"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <HardDrive className="w-4 h-4 text-slate-400" aria-hidden="true" />
+                        <span className="text-slate-200 text-xs font-semibold">
+                          Drive {drive.drive}
+                        </span>
+                      </div>
+                      <span className="text-xs font-tabular text-emerald-400 font-bold">
+                        {drive.freeGB} GB free
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-[10px] text-slate-400 font-tabular">
+                      <span>{usedGB} GB used</span>
+                      <span>{drive.totalGB} GB total ({percentUsed}%)</span>
+                    </div>
+                    <div
+                      role="progressbar"
+                      aria-valuenow={percentUsed}
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-label={`Drive ${drive.drive} Storage Percentage`}
+                      className="w-full bg-slate-800/80 rounded-full h-1.5 overflow-hidden border border-white/5"
+                    >
+                      <div
+                        className={`h-full rounded-full transition-all duration-500 ${
+                          percentUsed > 90
+                            ? 'bg-red-500'
+                            : percentUsed > 75
+                            ? 'bg-amber-500'
+                            : 'bg-emerald-500'
+                        }`}
+                        style={{ width: `${percentUsed}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>

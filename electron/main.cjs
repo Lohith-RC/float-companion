@@ -54,6 +54,7 @@ function createMainWindow() {
       preload: path.join(__dirname, 'preload.cjs'),
       nodeIntegration: false,
       contextIsolation: true,
+      sandbox: true,
       backgroundThrottling: false,
     },
   });
@@ -71,7 +72,9 @@ function createMainWindow() {
       const cleanStart = startUrl.split('#')[0].split('?')[0];
       if (cleanNav !== cleanStart) {
         event.preventDefault();
-        shell.openExternal(navigationUrl);
+        if (navigationUrl.startsWith('https:') || navigationUrl.startsWith('http:')) {
+          shell.openExternal(navigationUrl);
+        }
       }
     } catch {
       event.preventDefault();
@@ -150,9 +153,14 @@ app.whenReady().then(() => {
   createMainWindow();
   registerSystemHandlers(() => mainWindow);
 
-  // Explicit permission allowlist: allow audioCapture/media for Web Speech voice dictation, block ambient tracking
-  session.defaultSession.setPermissionRequestHandler((_webContents, permission, callback) => {
-    if (permission === 'media' || permission === 'audioCapture') {
+  // Explicit permission allowlist: allow audioCapture/media only for trusted local app origin
+  session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
+    const requestingUrl = webContents?.getURL?.() || '';
+    const isAppOrigin = isDev
+      ? requestingUrl.startsWith('http://127.0.0.1:5173') || requestingUrl.startsWith('http://localhost:5173')
+      : requestingUrl.startsWith('file://');
+
+    if (isAppOrigin && (permission === 'media' || permission === 'audioCapture')) {
       callback(true);
     } else {
       callback(false);

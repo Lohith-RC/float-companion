@@ -26,7 +26,7 @@ export const FloatingOrb: FC<FloatingOrbProps> = ({ onExpand }) => {
       className="w-full h-full flex items-center justify-center cursor-pointer select-none group drag-region relative bg-transparent border-0 p-0 m-0 outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 rounded-full"
       title="FloatCompanion (Ctrl + Shift + Space)"
     >
-      <div className="relative w-[66px] h-[66px] flex items-center justify-center no-drag">
+      <div className="relative w-[66px] h-[66px] flex items-center justify-center">
         {/* Sonar Acoustic Pulse Wave (Expanding Ambient Halo) */}
         <div
           className={`absolute inset-0 rounded-full pointer-events-none opacity-40 animate-sonar ${
@@ -73,7 +73,7 @@ export const FloatingOrb: FC<FloatingOrbProps> = ({ onExpand }) => {
           }`}
         >
           {/* Inner Frosted Optical Core (Doppelrand Core) */}
-          <div className="w-full h-full rounded-full bg-slate-950/90 backdrop-blur-2xl flex items-center justify-center relative overflow-hidden border border-white/20 shadow-[inset_0_1.5px_2px_rgba(255,255,255,0.45),inset_0_-2px_4px_rgba(0,0,0,0.8)]">
+          <div className="w-11 h-11 rounded-full bg-slate-950/90 backdrop-blur-2xl flex items-center justify-center relative overflow-hidden border border-white/20 shadow-[inset_0_1.5px_2px_rgba(255,255,255,0.45),inset_0_-2px_4px_rgba(0,0,0,0.8)] no-drag">
             {/* Top Specular Arc Reflection */}
             <div className="absolute top-1 left-2 right-2 h-[2px] bg-gradient-to-r from-transparent via-white/70 to-transparent rounded-full pointer-events-none" />
 

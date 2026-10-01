@@ -1,10 +1,10 @@
 const { ipcMain, screen, desktopCapturer, clipboard } = require('electron');
-const { exec } = require('child_process');
+const { exec, spawn } = require('child_process');
 const os = require('os');
 const { validateCommand } = require('./securityKernel.cjs');
 const { validateFocusSessionPayload, validateTypeTextPayload } = require('./ipcValidator.cjs');
 
-let focusInterval = null;
+let focusProcess = null;
 let cachedStorageInfo = null;
 let lastStorageQueryTime = 0;
 let isCurrentlyDistracted = false;
@@ -109,8 +109,12 @@ function registerSystemHandlers(getMainWindow) {
     const target = appAliases[normalized] || targetRaw;
 
     return new Promise((resolve) => {
+      const parts = target.split(' ');
+      const executable = parts[0];
+      const args = parts.slice(1).join(' ');
+
       const cmd = process.platform === 'win32'
-        ? `start "" "${target}"`
+        ? (args ? `start "" "${executable}" ${args}` : `start "" "${executable}"`)
         : `open -a "${target}"`;
 
       exec(cmd, (error) => {
@@ -182,9 +186,9 @@ function registerSystemHandlers(getMainWindow) {
     }
   });
 
-  // 5. Focus Guardian Session & Distraction Interceptor
+  // 5. Focus Guardian Session & Persistent Foreground Window Poller
   ipcMain.handle('focus:start-session', (_event, payload) => {
-    if (focusInterval) clearInterval(focusInterval);
+    stopFocusMonitoring();
 
     const validation = validateFocusSessionPayload(payload || {});
     if (!validation.valid) {
@@ -207,53 +211,90 @@ function registerSystemHandlers(getMainWindow) {
     isCurrentlyDistracted = false;
     const sessionStartTimestamp = Date.now();
 
-    focusInterval = setInterval(() => {
-      const win = getMainWindow();
-      if (process.platform === 'win32' && win) {
-        // Lightweight standard query without in-memory C# compilation
-        const psCommand = `Get-Process | Where-Object { $_.MainWindowTitle } | Select-Object -Property MainWindowTitle, ProcessName | ConvertTo-Json -Compress`;
+    if (process.platform === 'win32') {
+      const psScript = `
+$code = @'
+using System;
+using System.Runtime.InteropServices;
+using System.Text;
+using System.Diagnostics;
+public class FocusTracker {
+  [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
+  [DllImport("user32.dll", CharSet = CharSet.Auto)] public static extern int GetWindowText(IntPtr hWnd, StringBuilder text, int count);
+  [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
 
-        exec(`powershell -NoProfile -Command "${psCommand}"`, { timeout: 1500 }, (err, stdout) => {
-          if (!err && stdout) {
-            try {
-              const parsed = JSON.parse(stdout);
-              const windows = Array.isArray(parsed) ? parsed : [parsed];
-              let foundDistraction = false;
+  public static string GetActive() {
+    IntPtr h = GetForegroundWindow();
+    if (h == IntPtr.Zero) return "";
+    StringBuilder sb = new StringBuilder(512);
+    GetWindowText(h, sb, 512);
+    string title = sb.ToString();
+    uint pid = 0;
+    GetWindowThreadProcessId(h, out pid);
+    string proc = "";
+    try { if (pid > 0) proc = Process.GetProcessById((int)pid).ProcessName; } catch {}
+    return title + "|||" + proc;
+  }
+}
+'@
+Add-Type -TypeDefinition $code
 
-              for (const w of windows) {
-                const title = (w?.MainWindowTitle || '').trim();
-                const proc = (w?.ProcessName || '').trim();
-                const lowerTitle = title.toLowerCase();
+while ($true) {
+  $info = [FocusTracker]::GetActive()
+  if ($info) { Write-Output $info }
+  Start-Sleep -Seconds 3
+}
+`;
+      focusProcess = spawn('powershell.exe', ['-NoProfile', '-Command', psScript]);
 
-                for (const keyword of blacklistedKeywords) {
-                  if (lowerTitle.includes(keyword.toLowerCase())) {
-                    foundDistraction = true;
-                    if (!isCurrentlyDistracted) {
-                      isCurrentlyDistracted = true;
-                      win.webContents.send('focus:distraction-detected', {
-                        windowTitle: title,
-                        processName: proc,
-                        matchedRule: keyword,
-                        timestamp: Date.now(),
-                      });
-                    }
-                    break;
-                  }
-                }
-                if (foundDistraction) break;
-              }
+      let stdoutBuffer = '';
+      focusProcess.stdout.on('data', (chunk) => {
+        stdoutBuffer += chunk.toString();
+        const lines = stdoutBuffer.split('\n');
+        stdoutBuffer = lines.pop() || '';
 
-              if (!foundDistraction && isCurrentlyDistracted) {
-                isCurrentlyDistracted = false;
-                win.webContents.send('focus:distraction-cleared');
-              }
-            } catch {
-              // Ignore non-json stdout
+        const win = getMainWindow();
+        if (!win) return;
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed) continue;
+          const parts = trimmed.split('|||');
+          const title = (parts[0] || '').trim();
+          const proc = (parts[1] || '').trim();
+          const lowerTitle = title.toLowerCase();
+          const lowerProc = proc.toLowerCase();
+
+          let matchedKeyword = null;
+          for (const kw of blacklistedKeywords) {
+            const lowerKw = kw.toLowerCase();
+            if (lowerTitle.includes(lowerKw) || lowerProc.includes(lowerKw)) {
+              matchedKeyword = kw;
+              break;
             }
           }
-        });
-      }
-    }, 3000);
+
+          if (matchedKeyword) {
+            if (!isCurrentlyDistracted) {
+              isCurrentlyDistracted = true;
+              win.webContents.send('focus:distraction-detected', {
+                windowTitle: title,
+                processName: proc,
+                matchedRule: matchedKeyword,
+                timestamp: Date.now(),
+              });
+            }
+          } else if (isCurrentlyDistracted) {
+            isCurrentlyDistracted = false;
+            win.webContents.send('focus:distraction-cleared');
+          }
+        }
+      });
+
+      focusProcess.on('error', () => {
+        stopFocusMonitoring();
+      });
+    }
 
     return {
       success: true,
@@ -262,19 +303,19 @@ function registerSystemHandlers(getMainWindow) {
   });
 
   ipcMain.handle('focus:stop-session', () => {
-    if (focusInterval) {
-      clearInterval(focusInterval);
-      focusInterval = null;
-    }
-    isCurrentlyDistracted = false;
+    stopFocusMonitoring();
     return { success: true };
   });
 }
 
 function stopFocusMonitoring() {
-  if (focusInterval) {
-    clearInterval(focusInterval);
-    focusInterval = null;
+  if (focusProcess) {
+    try {
+      focusProcess.kill();
+    } catch {
+      // Ignore
+    }
+    focusProcess = null;
   }
   isCurrentlyDistracted = false;
 }

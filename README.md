@@ -42,8 +42,9 @@ Traditional AI assistants are passive browser tabs that require constant context
 2. **Sub-10ms Zero-Token OS Automation:** Answers system time, RAM consumption, drive space, and app launching locally with zero API latency and zero token billing.
 3. **Multimodal Desktop Screen Vision:** Captures active desktop context in 1-click and feeds high-resolution JPEG buffers directly to Gemini 2.5 Flash for instant error debugging and code explanation.
 4. **Hands-Free Voice Dictation:** Integrated Web Speech API speech-to-text with real-time audio waveform indicators.
-5. **Proactive Focus Guardian:** Background OS poller identifies distraction windows (YouTube, Reddit, Twitter, TikTok) during deep-work sprints, pulsing alert states and playing acoustic chimes.
+5. **Win32 Persistent Attention Guardian:** Lightweight native foreground window poller detects active distraction windows without process churn, protecting deep-work sprints.
 6. **Hardware-Backed DPAPI Encryption:** Stored API keys are encrypted at rest using Windows DPAPI (`safeStorage`) hardware keys, ensuring zero plaintext secrets on disk.
+7. **Multi-Drive Telemetry Dashboard:** Real-time visual monitoring for primary and secondary storage volumes with health indicators.
 
 ---
 
@@ -57,26 +58,28 @@ Traditional AI assistants are passive browser tabs that require constant context
 │       (68 x 68px)       │      (440 x 620px)      │      (Full Screen)      │
 │  • Doppelrand bezel     │  • AI Chat & Vision     │  • Translucent overlay  │
 │  • Acoustic sonar pulse │  • Focus Pomodoro board │  • Focus spotlighting   │
-│  • Draggable everywhere │  • Realtime hardware OS │  • Shortcut: Ctrl+Sh+C  │
+│  • Dual-zone drag & tap │  • Multi-drive OS stats │  • Shortcut: Ctrl+Sh+C  │
 └─────────────────────────┴─────────────────────────┴─────────────────────────┘
 ```
 
 ### 1. 🔮 The Doppelrand Optical Orb
 * Compact 68×68px floating glassmorphic circle docked to your screen edge.
 * Dual-ring machined bezel ("Doppelrand"), specular top arc reflections, rotating caustic sheen, and expanding ambient acoustic sonar pulse waves.
+* **Dual-Zone Ergonomics:** Outer 14px ring acts as a smooth window drag region across displays, while the inner 44px optical core responds to click-to-expand.
 * Stays seamlessly on top of full-screen IDEs and terminals without stealing focus.
 
 ### 2. ⚡ Zero-Token Deterministic Router
 * Local regex & AST matcher intercepts native queries before touching any network API:
   * `time` / `date` $\to$ Instant machine clock formatting (`<5ms`).
   * `ram` / `memory` $\to$ Real-time RAM total, used, free GB, and utilization % (`<15ms`).
-  * `disk` / `storage` $\to$ Win32 logical disk capacity and free headroom (`<60ms`).
-  * `open <app>` $\to$ Whitelisted app execution (`vscode`, `notepad`, `calc`, `chrome`, etc.) (`<20ms`).
+  * `disk` / `storage` $\to$ Win32 logical disk capacity and free headroom for all drives (`<50ms`).
+  * `open <app>` $\to$ Whitelisted app execution with argument parsing (`code`, `notepad`, `calc`, `chrome`, etc.) (`<20ms`).
 
-### 3. 🧠 Dual-Engine Neural Hub
-* **Primary Ultra-Fast Inference:** Groq Cloud running **Llama-3.3-70B-Versatile** delivering streaming tokens in `<350ms`.
+### 3. 🧠 Dual-Engine Neural Hub with Provider Priority
+* **User-Selected Priority:** Dynamically routes prompts to your preferred engine (Groq, Gemini, or local Ollama) with transparent automatic fallback.
+* **Ultra-Fast Inference:** Groq Cloud running **Llama-3.3-70B-Versatile** delivering streaming tokens in `<350ms`.
 * **Multimodal Vision Engine:** Google **Gemini 2.5 Flash** for rapid screen snapshot understanding and complex document analysis.
-* **Auto-Fallback & Key Vault:** Graceful offline degradation and multi-provider key rotation.
+* **Offline Local LLM:** Direct integration with local **Ollama** (`127.0.0.1:11434`) for air-gapped coding assistance.
 
 ### 4. 👁️ 1-Click Desktop Screen Vision
 * Tap the `📷` camera button in the tray to invoke Electron's `desktopCapturer`.
@@ -87,13 +90,11 @@ Traditional AI assistants are passive browser tabs that require constant context
 * Tap the `🎙️` microphone button to dictate prompts hands-free using the browser Web Speech API.
 * Real-time pulsing audio ring indicates active voice listening. Auto-appends spoken text to the active prompt.
 
-### 6. 🛡️ Focus Guardian & Distraction Shield
-* Proactive OS poller inspects the active foreground window handle every 3 seconds.
-* Matches window titles against an editable blacklist (`youtube`, `reddit`, `twitter`, `x.com`, `instagram`, `twitch`, `netflix`).
-* If a distraction window is focused during an active Pomodoro sprint:
-  * Orb flashes warning crimson red with dynamic ping animations.
-  * Discrete acoustic notification chime sounds.
-  * Expand tray to see distraction breakdown and recovery CTA.
+### 6. 🛡️ Persistent Win32 Attention Guardian
+* Compiles a single persistent background `FocusTracker` using Windows `user32.dll` (`GetForegroundWindow` / `GetWindowThreadProcessId`).
+* Zero process spawn churn (eliminates spawning 1,200 PowerShell processes/hour).
+* Ignores minimized background apps; only alerts when the user actively shifts focus to blacklisted distraction windows.
+* Records total distraction counts per sprint and saves records to local IndexedDB.
 
 ### 7. 🔒 Hardware-Encrypted Credential Vault
 * API keys are **never** stored in plaintext.
@@ -102,6 +103,7 @@ Traditional AI assistants are passive browser tabs that require constant context
 
 ### 8. ♿ Production-Grade a11y & Crash-Proofing
 * Built with 100% semantic HTML elements (`<button type="button">`, proper ARIA checked states, accessible live status regions).
+* Multi-drive storage visualizer supporting `C:`, `D:`, `E:` with color-coded headroom bars.
 * Zero blocking `alert()` dialogs; replaced by non-blocking, auto-dismissing toast notifications.
 * Zero `any` types across the entire TypeScript codebase.
 * Strict modular architecture ensuring all components remain **under 400 lines of code**.
@@ -117,7 +119,7 @@ Traditional AI assistants are passive browser tabs that require constant context
 | **Zero-Token Local OS Execution** | **Yes (<10ms)** | Extensions only | ❌ (All LLM) | ❌ (All LLM) | ❌ (All LLM) |
 | **Multimodal Screen Vision** | **Yes (1-Click Snapshot)** | ❌ | ❌ | Partial (Plus only) | ❌ |
 | **Hands-Free Voice Dictation** | **Yes (Native STT)** | ❌ | ❌ | Yes | ❌ |
-| **Proactive Distraction Guardian** | **Yes (Win32 Polling)** | ❌ | ❌ | ❌ | ❌ |
+| **Persistent Win32 Attention Guardian** | **Yes (user32.dll foreground)** | ❌ | ❌ | ❌ | ❌ |
 | **Hardware Key Encryption (DPAPI)**| **Yes (safeStorage)** | ❌ (Keychain plugin) | ❌ (Plaintext) | Proprietary Server | Proprietary Server |
 | **API Pricing Model** | **BYOK (Free Tier / Groq / Gemini)** | $8/mo Pro | Monthly Subscription | $20/mo Plus | $20/mo Pro |
 | **Privacy / Local-First History** | **100% On-Device (IndexedDB)** | Cloud sync | Cloud DB | Cloud DB | Cloud DB |
@@ -131,16 +133,17 @@ flowchart TD
     User([User Shortcut / Mouse Click]) --> |Ctrl+Shift+Space| Shell[Electron Main Shell]
     
     subgraph Security Layer
+        Shell --> Sandbox[Renderer Sandbox: Enabled]
         Shell --> Validator[ipcValidator.cjs\nRuntime Schema Validation]
-        Validator --> Kernel[securityKernel.cjs\nCommand Whitelist & De-obfuscation]
+        Validator --> Kernel[securityKernel.cjs\nCommand Whitelist & Sanitization]
     end
     
     subgraph OS Integration
         Kernel --> Win32[systemHandlers.cjs]
-        Win32 --> Stats[Hardware Telemetry: RAM / Disk / Uptime]
+        Win32 --> Stats[Hardware Telemetry: RAM / Multi-Drive / Uptime]
         Win32 --> AppLaunch[Executable Launcher: code, notepad, chrome]
         Win32 --> Capturer[desktopCapturer: Screen Snapshot]
-        Win32 --> Poller[Focus Guardian: 3s Foreground Poller]
+        Win32 --> Tracker[Persistent Win32 FocusTracker: user32.dll]
         Win32 --> Vault[secureStore.cjs: Windows DPAPI Encryption]
     end
     
@@ -158,8 +161,10 @@ flowchart TD
     end
     
     subgraph AI Neural Providers
-        Orch --> |Text Inference| Groq[Groq Llama-3.3-70B\n~300ms Streaming]
-        Orch --> |Screen Capture + Vision| Gemini[Google Gemini 2.5 Flash\nMultimodal Vision]
+        Orch --> |User Preferred Engine| Priority{Provider Selection}
+        Priority --> |Groq Priority| Groq[Groq Llama-3.3-70B\n~300ms Streaming]
+        Priority --> |Gemini Priority| Gemini[Google Gemini 2.5 Flash\nMultimodal Vision]
+        Priority --> |Offline Priority| Ollama[Local Ollama: Llama3\n127.0.0.1:11434]
     end
     
     subgraph Storage
@@ -190,7 +195,7 @@ Type these commands directly into the prompt bar for instantaneous local respons
 | :--- | :--- | :---: |
 | `time` or `date` | Displays local time, day of week, and ISO calendar format | **< 3ms** |
 | `ram` or `memory` | Inspects OS total RAM, utilized memory, free GB, and usage % | **< 15ms** |
-| `disk` or `storage` | Inspects Win32 drive sizes and free capacity | **< 50ms** |
+| `disk` or `storage` | Inspects Win32 drive sizes and free capacity for all drives | **< 50ms** |
 | `open vscode` | Launches Visual Studio Code (`code`) | **< 20ms** |
 | `open notepad` | Launches Windows Notepad (`notepad.exe`) | **< 20ms** |
 | `open calc` | Launches Calculator (`calc.exe`) | **< 20ms** |
@@ -253,11 +258,13 @@ npm run pack:mac
 
 FloatCompanion is built with defense-in-depth security principles:
 
-1. **IPC Runtime Schema Validation:** Every payload crossing the context bridge into Node.js is strictly validated using schema rules in [`electron/ipcValidator.cjs`](./electron/ipcValidator.cjs). Invalid structures are rejected before execution.
-2. **Execution Whitelisting & Input Sanitization:** App launches in `os:launch-app` enforce a strict regex whitelist (`^[a-zA-Z0-9_\-\.:\s]+$`) and length bounds to eliminate command injection.
-3. **Hardware-Backed Credential Vault:** Keys saved in Settings are encrypted with Windows DPAPI (`safeStorage.encryptString()`) in [`electron/secureStore.cjs`](./electron/secureStore.cjs), preventing plaintext disk compromise.
-4. **Strict Content Security Policy (CSP):** `index.html` restricts scripts, styles, and network calls solely to authorized AI endpoints (`api.groq.com`, `generativelanguage.googleapis.com`).
-5. **Hyperlink Quarantining:** External URLs in Markdown or links are quarantined; internal navigation is prevented (`will-navigate`) and forced into the user's default OS browser via `shell.openExternal`.
+1. **Renderer Sandbox Enabled:** Chromium renderer runs with `sandbox: true`, preventing renderer exploits from escaping into node capabilities.
+2. **IPC Runtime Schema Validation:** Every payload crossing the context bridge into Node.js is strictly validated using schema rules in [`electron/ipcValidator.cjs`](./electron/ipcValidator.cjs). Invalid structures are rejected before execution.
+3. **Execution Whitelisting & Input Sanitization:** App launches in `os:launch-app` enforce a strict regex whitelist (`^[a-zA-Z0-9_\-\.:\s]+$`) and length bounds to eliminate command injection.
+4. **Hardware-Backed Credential Vault:** Keys saved in Settings are encrypted with Windows DPAPI (`safeStorage.encryptString()`) in [`electron/secureStore.cjs`](./electron/secureStore.cjs), preventing plaintext disk compromise.
+5. **Strict Content Security Policy (CSP):** `index.html` restricts scripts, styles, and network calls solely to authorized AI endpoints (`api.groq.com`, `generativelanguage.googleapis.com`).
+6. **Hyperlink Quarantining & Protocol Whitelisting:** External navigation is blocked (`will-navigate`); only verified `https:` and `http:` URLs can be opened via `shell.openExternal`.
+7. **Local-Origin Media Permissions:** Media permissions are restricted exclusively to trusted local application origins.
 
 ---
 

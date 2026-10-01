@@ -167,7 +167,7 @@ export const ChatTab: FC<ChatTabProps> = ({
             <div className="whitespace-pre-wrap">{streamingContent || 'Synthesizing response...'}</div>
             <div className="mt-1.5 text-[10px] text-sky-400 font-tabular flex items-center gap-1.5 animate-pulse">
               <RotateCw className="w-3 h-3 animate-spin" aria-hidden="true" />
-              <span>Streaming tokens via Groq...</span>
+              <span>Streaming response...</span>
             </div>
           </div>
         </article>

@@ -56,50 +56,61 @@ export class AIOrchestrator {
       }
     }
 
-    // Priority 1: Groq (Ultra-fast <300ms)
-    if (settings.groqKey?.trim()) {
-      try {
-        await this.streamGroq(messages, settings.groqKey.trim(), signal, callbacks);
-        return;
-      } catch (err: unknown) {
-        if (err instanceof Error && err.name === 'AbortError') return;
-        const msg = getErrorMessage(err);
-        console.warn('Groq stream failed or rate-limited, attempting fallback:', msg);
-        // Fallback to Gemini if key available
-        if (settings.geminiKey?.trim()) {
-          try {
-            await this.streamGemini(messages, settings.geminiKey.trim(), signal, callbacks);
-            return;
-          } catch (geminiErr: unknown) {
-            console.error('Gemini fallback failed:', getErrorMessage(geminiErr));
-          }
-        }
-        callbacks.onError(`Groq Error: ${msg}. (Check API key in Settings)`);
-        return;
-      }
-    }
+    const preferred = settings.defaultModel || 'groq';
 
-    // Priority 2: Gemini Direct
-    if (settings.geminiKey?.trim()) {
+    const tryGemini = async (): Promise<boolean> => {
+      if (!settings.geminiKey?.trim()) return false;
       try {
         await this.streamGemini(messages, settings.geminiKey.trim(), signal, callbacks);
-        return;
+        return true;
+      } catch (err: unknown) {
+        if (err instanceof Error && err.name === 'AbortError') throw err;
+        console.warn('Gemini stream failed:', getErrorMessage(err));
+        return false;
+      }
+    };
+
+    const tryGroq = async (): Promise<boolean> => {
+      if (!settings.groqKey?.trim()) return false;
+      try {
+        await this.streamGroq(messages, settings.groqKey.trim(), signal, callbacks);
+        return true;
+      } catch (err: unknown) {
+        if (err instanceof Error && err.name === 'AbortError') throw err;
+        console.warn('Groq stream failed:', getErrorMessage(err));
+        return false;
+      }
+    };
+
+    const tryOllama = async (): Promise<boolean> => {
+      try {
+        return await this.streamOllama(messages, signal, callbacks);
+      } catch {
+        return false;
+      }
+    };
+
+    // Build priority list respecting user preference
+    const providers: Array<{ name: string; fn: () => Promise<boolean> }> = [];
+    if (preferred === 'gemini') {
+      providers.push({ name: 'Gemini', fn: tryGemini }, { name: 'Groq', fn: tryGroq }, { name: 'Ollama', fn: tryOllama });
+    } else if (preferred === 'ollama') {
+      providers.push({ name: 'Ollama', fn: tryOllama }, { name: 'Groq', fn: tryGroq }, { name: 'Gemini', fn: tryGemini });
+    } else {
+      // Default: Groq (Ultra-fast <300ms) -> Gemini -> Ollama
+      providers.push({ name: 'Groq', fn: tryGroq }, { name: 'Gemini', fn: tryGemini }, { name: 'Ollama', fn: tryOllama });
+    }
+
+    for (const provider of providers) {
+      try {
+        const success = await provider.fn();
+        if (success) return;
       } catch (err: unknown) {
         if (err instanceof Error && err.name === 'AbortError') return;
-        callbacks.onError(`Gemini Error: ${getErrorMessage(err)}. (Check API key in Settings)`);
-        return;
       }
     }
 
-    // Priority 3: Local Ollama (Offline)
-    try {
-      const ollamaSuccess = await this.streamOllama(messages, signal, callbacks);
-      if (ollamaSuccess) return;
-    } catch {
-      // Ollama not running
-    }
-
-    // No keys configured
+    // No keys configured or all providers failed
     callbacks.onDone(
       `🔑 **AI Engine Not Configured Yet**\n\nTo activate live AI responses (powered by Groq Llama-3.3 or Google Gemini):\n1. Click the **Settings ⚙️** icon in the header.\n2. Paste your free **Groq API Key** ([console.groq.com](https://console.groq.com)) or **Gemini Key** ([aistudio.google.com](https://aistudio.google.com)).\n\n*Note: Zero-token local commands like \`"time"\`, \`"ram"\`, and \`"open notepad"\` work without any API keys!*`
     );
