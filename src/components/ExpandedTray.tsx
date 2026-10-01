@@ -18,6 +18,7 @@ import {
   Terminal,
   HardDrive,
   CornerDownLeft,
+  Zap,
 } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { matchLocalIntent } from '../ai/fastRouter';
@@ -62,7 +63,8 @@ export const ExpandedTray: FC<ExpandedTrayProps> = ({ onCollapse, onOpenCanvas }
   const [userSettings, setUserSettings] = useState<UserSettings | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  // Focus timer state (25 minutes = 1500 seconds)
+  // Focus chronograph state
+  const [selectedDuration, setSelectedDuration] = useState(25);
   const [secondsRemaining, setSecondsRemaining] = useState(25 * 60);
   const chatBottomRef = useRef<HTMLDivElement>(null);
 
@@ -107,18 +109,18 @@ export const ExpandedTray: FC<ExpandedTrayProps> = ({ onCollapse, onOpenCanvas }
             recordFocusSession({
               id: Date.now().toString(),
               taskTitle: activeFocusTask || 'Focus Sprint',
-              durationMins: 25,
+              durationMins: selectedDuration,
               completedAt: Date.now(),
               distractionsCaught: 0,
             });
-            return 25 * 60;
+            return selectedDuration * 60;
           }
           return prev - 1;
         });
       }, 1000);
     }
     return () => clearInterval(timer);
-  }, [isFocusing, secondsRemaining, activeFocusTask]);
+  }, [isFocusing, secondsRemaining, activeFocusTask, selectedDuration]);
 
   const handleSubmit = async (e?: React.FormEvent, overridePrompt?: string) => {
     if (e) e.preventDefault();
@@ -190,13 +192,14 @@ export const ExpandedTray: FC<ExpandedTrayProps> = ({ onCollapse, onOpenCanvas }
     }
   };
 
-  const startFocusSprint = (taskTitle: string) => {
-    setSecondsRemaining(25 * 60);
-    setFocusing(true, taskTitle, 25);
+  const startFocusSprint = (durationMins: number, taskTitle: string) => {
+    setSelectedDuration(durationMins);
+    setSecondsRemaining(durationMins * 60);
+    setFocusing(true, taskTitle, durationMins);
     sounds.playChime();
     if (window.electronAPI?.focus?.startSession) {
       window.electronAPI.focus.startSession({
-        durationMinutes: 25,
+        durationMinutes: durationMins,
         taskTitle,
         distractionBlacklist: userSettings?.distractionBlacklist,
       });
@@ -205,7 +208,7 @@ export const ExpandedTray: FC<ExpandedTrayProps> = ({ onCollapse, onOpenCanvas }
 
   const stopFocusSprint = () => {
     setFocusing(false);
-    setSecondsRemaining(25 * 60);
+    setSecondsRemaining(selectedDuration * 60);
     sounds.playClick();
     if (window.electronAPI?.focus?.stopSession) {
       window.electronAPI.focus.stopSession();
@@ -218,14 +221,19 @@ export const ExpandedTray: FC<ExpandedTrayProps> = ({ onCollapse, onOpenCanvas }
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const progressFraction = (25 * 60 - secondsRemaining) / (25 * 60);
+  const totalSprintSecs = selectedDuration * 60;
+  const progressFraction = (totalSprintSecs - secondsRemaining) / totalSprintSecs;
   const strokeDash = 2 * Math.PI * 54;
   const strokeOffset = strokeDash * (1 - progressFraction);
+
+  const completedTasksCount = tasks.filter((t) => t.completed).length;
+  const totalTasksCount = tasks.length;
+  const taskProgressPercent = totalTasksCount > 0 ? Math.round((completedTasksCount / totalTasksCount) * 100) : 0;
 
   return (
     <div className="w-full h-full doppelrand-shell select-none">
       <div className="w-full h-full doppelrand-core flex flex-col overflow-hidden relative">
-        {/* Settings Modal */}
+        {/* Settings Modal Overlay */}
         {settingsOpen && userSettings && (
           <SettingsView
             settings={userSettings}
@@ -253,7 +261,7 @@ export const ExpandedTray: FC<ExpandedTrayProps> = ({ onCollapse, onOpenCanvas }
             </div>
           </div>
 
-          {/* Nested Button-in-Button Capsule */}
+          {/* Button-in-Button Header Cluster */}
           <div className="flex items-center gap-1.5 no-drag bg-slate-900/60 p-1 rounded-xl border border-white/10">
             <button
               onClick={onOpenCanvas}
@@ -382,7 +390,8 @@ export const ExpandedTray: FC<ExpandedTrayProps> = ({ onCollapse, onOpenCanvas }
 
                     {msg.isZeroToken && (
                       <div className="mt-1.5 text-[9px] text-emerald-400 font-tabular font-semibold flex items-center gap-1">
-                        <span>⚡ 0-Token Deterministic Intent</span>
+                        <Zap className="w-3 h-3 fill-current" />
+                        <span>0-Token Deterministic Intent</span>
                       </div>
                     )}
 
@@ -431,6 +440,23 @@ export const ExpandedTray: FC<ExpandedTrayProps> = ({ onCollapse, onOpenCanvas }
           {/* TAB 2: Task Board */}
           {activeTab === 'tasks' && (
             <div className="space-y-3">
+              {/* Progress Summary Card */}
+              <div className="p-3 bg-slate-900/70 rounded-xl border border-white/10 space-y-1.5">
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-slate-300 font-semibold">Sprint Velocity</span>
+                  <span className="font-tabular font-bold text-sky-400">
+                    {completedTasksCount} of {totalTasksCount} done ({taskProgressPercent}%)
+                  </span>
+                </div>
+                <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                  <div
+                    className="bg-gradient-to-r from-sky-500 to-emerald-400 h-full rounded-full transition-all duration-500"
+                    style={{ width: `${taskProgressPercent}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* Add Task Input */}
               <div className="flex items-center gap-2 bg-slate-900/60 p-1.5 rounded-xl border border-white/10">
                 <input
                   type="text"
@@ -452,12 +478,13 @@ export const ExpandedTray: FC<ExpandedTrayProps> = ({ onCollapse, onOpenCanvas }
                       setNewTaskTitle('');
                     }
                   }}
-                  className="px-3 py-1 bg-sky-600 hover:bg-sky-500 text-white rounded-lg text-xs font-semibold shadow-sm"
+                  className="px-3 py-1 bg-sky-600 hover:bg-sky-500 text-white rounded-lg text-xs font-semibold shadow-sm transition-all"
                 >
                   Add
                 </button>
               </div>
 
+              {/* Task Items */}
               <div className="space-y-1.5">
                 {tasks.map((task) => (
                   <div
@@ -490,6 +517,29 @@ export const ExpandedTray: FC<ExpandedTrayProps> = ({ onCollapse, onOpenCanvas }
           {/* TAB 3: Focus Mode Chronograph */}
           {activeTab === 'focus' && (
             <div className="h-full flex flex-col items-center justify-center p-2 text-center space-y-4">
+              {/* Duration Preset Pills */}
+              {!isFocusing && (
+                <div className="flex items-center gap-1 bg-slate-900/70 p-1 rounded-xl border border-white/10">
+                  {[15, 25, 45, 60].map((dur) => (
+                    <button
+                      key={dur}
+                      onClick={() => {
+                        setSelectedDuration(dur);
+                        setSecondsRemaining(dur * 60);
+                        sounds.playClick();
+                      }}
+                      className={`px-3 py-1 rounded-lg text-[11px] font-tabular font-semibold transition-all ${
+                        selectedDuration === dur
+                          ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-950/30'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      {dur}m
+                    </button>
+                  ))}
+                </div>
+              )}
+
               <div className="relative w-40 h-40 flex items-center justify-center">
                 {/* SVG Circular Progress Track */}
                 <svg className="w-full h-full transform -rotate-90">
@@ -521,7 +571,7 @@ export const ExpandedTray: FC<ExpandedTrayProps> = ({ onCollapse, onOpenCanvas }
                     {formatTimer(secondsRemaining)}
                   </span>
                   <span className="text-[9px] uppercase tracking-[0.18em] font-semibold text-slate-400 mt-1">
-                    {isFocusing ? 'Active Sprint' : 'Deep Work'}
+                    {isFocusing ? 'Active Sprint' : `${selectedDuration}m Session`}
                   </span>
                 </div>
               </div>
@@ -545,11 +595,11 @@ export const ExpandedTray: FC<ExpandedTrayProps> = ({ onCollapse, onOpenCanvas }
                     Background window monitoring polls every 3s and intercepts distractions.
                   </p>
                   <button
-                    onClick={() => startFocusSprint('Focus Sprint #1')}
+                    onClick={() => startFocusSprint(selectedDuration, `Sprint (${selectedDuration}m)`)}
                     className="w-full py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-lg shadow-amber-950/40 transition-all hover:scale-[1.02]"
                   >
                     <Play className="w-3.5 h-3.5 fill-current" />
-                    <span>Start 25-Min Focus Sprint</span>
+                    <span>Start {selectedDuration}-Min Sprint</span>
                   </button>
                 </div>
               )}

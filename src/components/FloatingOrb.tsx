@@ -13,59 +13,58 @@ export const FloatingOrb: FC<FloatingOrbProps> = ({ onExpand }) => {
   return (
     <div
       onClick={onExpand}
-      className="w-full h-full flex items-center justify-center cursor-pointer select-none group drag-region"
-      title="Click or press Ctrl+Shift+Space to summon FloatCompanion"
+      className="w-full h-full flex items-center justify-center cursor-pointer select-none group drag-region relative"
+      title="FloatCompanion (Ctrl + Shift + Space)"
     >
-      {/* Outer Halo Ambient Diffuser */}
-      <div className="relative w-[62px] h-[62px] flex items-center justify-center no-drag">
-        {/* Ambient Glow Aura */}
+      <div className="relative w-[64px] h-[64px] flex items-center justify-center no-drag">
+        {/* Ambient Chromatic Glow */}
         <div
-          className={`absolute -inset-1 rounded-full blur-md opacity-60 transition-all duration-700 ${
+          className={`absolute -inset-1.5 rounded-full blur-lg opacity-60 transition-all duration-700 ${
             isDistracted
               ? 'bg-red-500/80 animate-pulse'
               : isFocusing
               ? 'bg-amber-400/60 animate-pulse'
-              : 'bg-gradient-to-tr from-sky-400/40 via-indigo-500/30 to-teal-400/40 group-hover:opacity-100 group-hover:scale-110'
+              : 'bg-gradient-to-tr from-sky-500/40 via-indigo-500/30 to-teal-400/40 group-hover:opacity-100 group-hover:scale-110'
           }`}
         />
 
-        {/* Machined Bezel Enclosure (Doppelrand Optical Lens) */}
+        {/* Outer Machined Bezel Rim */}
         <div
-          className={`relative w-full h-full rounded-full flex items-center justify-center p-[2px] transition-all duration-500 ${
+          className={`relative w-full h-full rounded-full flex items-center justify-center p-[2.5px] transition-all duration-500 ${
             isDistracted
-              ? 'bg-gradient-to-b from-red-400 to-red-950 border border-red-500/60 shadow-[0_0_30px_rgba(239,68,68,0.7)]'
+              ? 'bg-gradient-to-b from-red-400 to-red-950 border border-red-500/60 shadow-[0_0_35px_rgba(239,68,68,0.8)]'
               : isFocusing
-              ? 'bg-gradient-to-b from-amber-300/60 to-amber-950 border border-amber-400/60 shadow-[0_0_25px_rgba(245,158,11,0.5)]'
+              ? 'bg-gradient-to-b from-amber-300/70 to-amber-950 border border-amber-400/60 shadow-[0_0_28px_rgba(245,158,11,0.6)]'
               : 'lens-outer-bezel'
           }`}
         >
-          {/* Inner Caustic Lens Core */}
-          <div className="w-full h-full rounded-full bg-slate-950/85 backdrop-blur-xl flex items-center justify-center relative overflow-hidden border border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.3)]">
-            {/* Subtle Caustic Shimmer Light Sweep */}
-            <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-white/10 opacity-70 group-hover:rotate-45 transition-transform duration-700 pointer-events-none" />
+          {/* Inner Frosted Optical Core */}
+          <div className="w-full h-full rounded-full bg-slate-950/90 backdrop-blur-2xl flex items-center justify-center relative overflow-hidden border border-white/15 shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.45)]">
+            {/* Top Specular Arc Reflection */}
+            <div className="absolute top-1 left-2.5 right-2.5 h-[1.5px] bg-gradient-to-r from-transparent via-white/50 to-transparent rounded-full pointer-events-none" />
 
-            {/* Core Morphing Icon */}
+            {/* Dynamic Center Glyphs */}
             {isDistracted ? (
               <AlertTriangle className="w-5 h-5 text-red-400 animate-bounce" />
             ) : isFocusing ? (
-              <Brain className="w-5 h-5 text-amber-300 animate-pulse" />
+              <Brain className="w-5 h-5 text-amber-300 animate-pulse drop-shadow-[0_0_8px_rgba(245,158,11,0.5)]" />
             ) : (
-              <Sparkles className="w-5 h-5 text-sky-300 group-hover:scale-110 group-hover:rotate-12 transition-all duration-300 drop-shadow-[0_0_8px_rgba(56,189,248,0.6)]" />
+              <Sparkles className="w-5 h-5 text-sky-300 group-hover:scale-110 group-hover:rotate-12 transition-all duration-300 drop-shadow-[0_0_10px_rgba(56,189,248,0.7)]" />
             )}
 
-            {/* Specular Rim Arc (Top Highlight) */}
-            <div className="absolute top-1 left-2 right-2 h-[2px] bg-gradient-to-r from-transparent via-white/40 to-transparent rounded-full" />
+            {/* Concentric Inner Optical Ring */}
+            <div className="absolute inset-1 rounded-full border border-white/[0.06] pointer-events-none" />
           </div>
 
           {/* Micro-Pip Status Halo */}
-          <div className="absolute -top-0.5 -right-0.5 flex items-center justify-center">
+          <div className="absolute -top-0.5 -right-0.5 flex items-center justify-center pointer-events-none">
             <span
               className={`absolute w-3.5 h-3.5 rounded-full opacity-60 ${
                 isDistracted ? 'bg-red-500 animate-ping' : isFocusing ? 'bg-amber-400 animate-ping' : 'bg-emerald-400 animate-ping'
               }`}
             />
             <span
-              className={`relative w-2.5 h-2.5 rounded-full border border-slate-950 ${
+              className={`relative w-2.5 h-2.5 rounded-full border-2 border-slate-950 shadow-sm ${
                 isDistracted ? 'bg-red-500' : isFocusing ? 'bg-amber-400' : 'bg-emerald-400'
               }`}
             />
