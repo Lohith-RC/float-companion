@@ -2,15 +2,18 @@ const { app, BrowserWindow, ipcMain, globalShortcut, screen, Tray, Menu, nativeI
 const path = require('path');
 const { exec } = require('child_process');
 const os = require('os');
+const { validateCommand } = require('./securityKernel.cjs');
+const SecureStore = require('./secureStore.cjs');
 
 let mainWindow = null;
 let tray = null;
 let currentMode = 'orb'; // 'orb' | 'tray' | 'canvas'
 let lastOrbPosition = { x: 0, y: 0 };
 let focusInterval = null;
+let secureStore = null;
 
 const ORB_SIZE = { width: 68, height: 68 };
-const TRAY_SIZE = { width: 420, height: 600 };
+const TRAY_SIZE = { width: 440, height: 620 };
 
 const isDev = process.env.NODE_ENV !== 'production';
 
@@ -63,7 +66,7 @@ function createMainWindow() {
 
   mainWindow.loadURL(startUrl);
 
-  // Set window level to float seamlessly
+  // Set window level to float seamlessly over normal applications
   mainWindow.setAlwaysOnTop(true, 'screen-saver');
 
   mainWindow.on('closed', () => {
@@ -123,6 +126,7 @@ function toggleWindowMode() {
 
 // App Lifecycle
 app.whenReady().then(() => {
+  secureStore = new SecureStore();
   createMainWindow();
 
   // Global Summon Hotkey: Ctrl+Shift+Space
@@ -137,7 +141,7 @@ app.whenReady().then(() => {
     if (!icon.isEmpty()) {
       tray = new Tray(icon);
       const contextMenu = Menu.buildFromTemplate([
-        { label: 'Toggle Assistant (Ctrl+Shift+Space)', click: toggleWindowMode },
+        { label: 'Toggle FloatCompanion (Ctrl+Shift+Space)', click: toggleWindowMode },
         { type: 'separator' },
         { label: 'Reset to Screen Edge', click: collapseToOrb },
         { label: 'Quit FloatCompanion', click: () => app.quit() },
@@ -160,7 +164,10 @@ app.on('will-quit', () => {
   if (focusInterval) clearInterval(focusInterval);
 });
 
-// IPC Channel Handlers
+// ==============================================================================
+// 1. WINDOW MANAGEMENT CHANNELS (IPC_API.md Section 2.1)
+// ==============================================================================
+
 ipcMain.handle('window:expand', () => {
   expandToTray();
   return { success: true };
@@ -171,9 +178,12 @@ ipcMain.handle('window:collapse', () => {
   return { success: true };
 });
 
-ipcMain.handle('window:resize', (_event, { mode, width, height }) => {
-  if (!mainWindow) return { success: false };
-  if (width > 800) {
+ipcMain.handle('window:resize', (_event, payload) => {
+  if (!mainWindow) return { success: false, currentBounds: { x: 0, y: 0, width: 0, height: 0 } };
+  const { mode, width, height } = payload || {};
+
+  if (width && width > 800) {
+    // Fullscreen screen canvas mode
     const primaryDisplay = screen.getPrimaryDisplay();
     const { width: sw, height: sh } = primaryDisplay.workAreaSize;
     mainWindow.setBounds({ x: 0, y: 0, width: sw, height: sh });
@@ -183,21 +193,38 @@ ipcMain.handle('window:resize', (_event, { mode, width, height }) => {
   } else {
     collapseToOrb();
   }
+
+  const bounds = mainWindow.getBounds();
+  return {
+    success: true,
+    currentBounds: {
+      x: bounds.x,
+      y: bounds.y,
+      width: bounds.width,
+      height: bounds.height,
+    },
+  };
+});
+
+ipcMain.handle('window:set-ignore-mouse', (_event, { ignore, forward }) => {
+  if (!mainWindow) return { success: false };
+  mainWindow.setIgnoreMouseEvents(Boolean(ignore), { forward: Boolean(forward) });
   return { success: true };
 });
 
-ipcMain.handle('window:close', () => {
+ipcMain.on('window:minimize', () => {
   collapseToOrb();
-  return { success: true };
 });
 
-ipcMain.handle('window:minimize', () => {
+ipcMain.on('window:close', () => {
   collapseToOrb();
-  return { success: true };
 });
 
-// OS System Stats Handler (Zero-Token Real Hardware Telemetry)
-ipcMain.handle('os:get-stats', async () => {
+// ==============================================================================
+// 2. OPERATING SYSTEM & HARDWARE CHANNELS (IPC_API.md Section 2.2)
+// ==============================================================================
+
+ipcMain.handle('os:get-system-stats', async () => {
   const totalMemBytes = os.totalmem();
   const freeMemBytes = os.freemem();
   const usedMemBytes = totalMemBytes - freeMemBytes;
@@ -242,14 +269,24 @@ ipcMain.handle('os:get-stats', async () => {
       usagePercent,
     },
     storage: storageInfo,
-    platform: process.platform,
+    platform: process.platform === 'win32' ? 'win32' : process.platform === 'darwin' ? 'darwin' : 'linux',
     uptimeSeconds: Math.round(os.uptime()),
   };
 });
 
-// OS App Launcher
-ipcMain.handle('os:launch-app', async (_event, { appName }) => {
-  const normalized = (appName || '').trim().toLowerCase();
+ipcMain.handle('os:launch-app', async (_event, payload) => {
+  const targetRaw = (payload?.target || payload?.appName || '').trim();
+  const normalized = targetRaw.toLowerCase();
+
+  // Validate command against security kernel
+  const sec = validateCommand(targetRaw);
+  if (!sec.safe) {
+    return {
+      success: false,
+      actionTaken: 'not_found',
+      error: sec.error,
+    };
+  }
 
   const appAliases = {
     vscode: 'code',
@@ -266,7 +303,7 @@ ipcMain.handle('os:launch-app', async (_event, { appName }) => {
     settings: 'ms-settings:',
   };
 
-  const target = appAliases[normalized] || normalized;
+  const target = appAliases[normalized] || targetRaw;
 
   return new Promise((resolve) => {
     const cmd = process.platform === 'win32'
@@ -283,64 +320,111 @@ ipcMain.handle('os:launch-app', async (_event, { appName }) => {
       } else {
         resolve({
           success: true,
+          executablePath: target,
           actionTaken: 'launched',
-          message: `Opened ${appName}`,
+          message: `Opened ${targetRaw}`,
         });
       }
     });
   });
 });
 
-// Type text into active background window
-ipcMain.handle('os:type-text', async (_event, { text }) => {
-  if (!text) return { success: false };
+ipcMain.handle('os:type-text', async (_event, { text, delayMs = 150 }) => {
+  if (!text) return { success: false, error: 'Empty text payload' };
 
   clipboard.writeText(text);
 
   if (process.platform === 'win32' && mainWindow) {
     mainWindow.blur();
     setTimeout(() => {
-      exec(`powershell -NoProfile -Command "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SendKeys]::SendWait('^v')"`);
-    }, 150);
+      exec(`powershell -NoProfile -Command "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SendKeys]::SendWait('^v')"`, (err) => {
+        if (err) console.warn('SendKeys warning:', err.message);
+      });
+    }, delayMs);
   }
 
   return { success: true };
 });
 
-// Focus Guardian Poller
-ipcMain.handle('focus:start', (_event, { durationMins, task }) => {
+// ==============================================================================
+// 3. FOCUS GUARDIAN & DISTRACTION CHANNELS (IPC_API.md Section 2.3)
+// ==============================================================================
+
+ipcMain.handle('focus:start-session', (_event, payload) => {
   if (focusInterval) clearInterval(focusInterval);
 
-  const blacklistedKeywords = ['youtube', 'netflix', 'reddit', 'twitter', 'x.com', 'instagram', 'twitch', 'tiktok'];
+  const { durationMinutes = 25, taskTitle = 'Focus Sprint', distractionBlacklist } = payload || {};
+  const blacklistedKeywords = distractionBlacklist || [
+    'youtube',
+    'netflix',
+    'reddit',
+    'twitter',
+    'x.com',
+    'instagram',
+    'twitch',
+    'tiktok',
+    'facebook',
+  ];
+
+  const sessionStartTimestamp = Date.now();
 
   focusInterval = setInterval(() => {
     if (process.platform === 'win32' && mainWindow) {
-      const psCommand = `(Get-Process | Where-Object { $_.MainWindowHandle -eq (Add-Type -MemberDefinition '[DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();' -Name 'Win32' -Namespace 'Native' -PassThru)::GetForegroundWindow() }).MainWindowTitle`;
+      const psCommand = `(Get-Process | Where-Object { $_.MainWindowHandle -eq (Add-Type -MemberDefinition '[DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();' -Name 'Win32' -Namespace 'Native' -PassThru)::GetForegroundWindow() }) | Select-Object -Property MainWindowTitle, ProcessName | ConvertTo-Json`;
 
       exec(`powershell -NoProfile -Command "${psCommand}"`, { timeout: 1500 }, (err, stdout) => {
         if (!err && stdout) {
-          const title = stdout.trim().toLowerCase();
-          for (const keyword of blacklistedKeywords) {
-            if (title.includes(keyword)) {
-              mainWindow.webContents.send('focus:distraction', {
-                windowTitle: stdout.trim(),
-                matchedKeyword: keyword,
-              });
-              break;
+          try {
+            const parsed = JSON.parse(stdout);
+            const title = (parsed?.MainWindowTitle || '').trim();
+            const proc = (parsed?.ProcessName || '').trim();
+            const lowerTitle = title.toLowerCase();
+
+            for (const keyword of blacklistedKeywords) {
+              if (lowerTitle.includes(keyword.toLowerCase())) {
+                mainWindow.webContents.send('focus:distraction-detected', {
+                  windowTitle: title,
+                  processName: proc,
+                  matchedRule: keyword,
+                  timestamp: Date.now(),
+                });
+                break;
+              }
             }
+          } catch {
+            // Ignore non-json stdout
           }
         }
       });
     }
   }, 3000);
 
-  return { success: true };
+  return {
+    success: true,
+    sessionStartTimestamp,
+  };
 });
 
-ipcMain.handle('focus:stop', () => {
+ipcMain.handle('focus:stop-session', () => {
   if (focusInterval) {
     clearInterval(focusInterval);
     focusInterval = null;
   }
   return { success: true };
+});
+
+// ==============================================================================
+// 4. SECURE STORAGE CHANNELS (IPC_API.md Section 2.4)
+// ==============================================================================
+
+ipcMain.handle('store:get-secure-key', async (_event, { keyName }) => {
+  if (!secureStore) return { key: null };
+  const val = secureStore.get(keyName);
+  return { key: val };
+});
+
+ipcMain.handle('store:set-secure-key', async (_event, { keyName, keyValue }) => {
+  if (!secureStore) return { success: false };
+  const res = secureStore.set(keyName, keyValue);
+  return { success: Boolean(res) };
 });

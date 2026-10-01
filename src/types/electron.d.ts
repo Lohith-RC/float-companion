@@ -1,4 +1,4 @@
-export interface SystemStats {
+export interface SystemStatsResponse {
   memory: {
     totalGB: number;
     usedGB: number;
@@ -11,35 +11,70 @@ export interface SystemStats {
     freeGB: number;
     usedGB: number;
   }[];
-  platform: string;
+  platform: 'win32' | 'darwin' | 'linux';
   uptimeSeconds: number;
 }
 
-export interface LaunchAppResult {
+export interface LaunchAppResponse {
   success: boolean;
+  executablePath?: string;
   actionTaken: 'launched' | 'brought_to_foreground' | 'not_found';
-  message?: string;
   error?: string;
+  message?: string;
+}
+
+export interface TypeTextResponse {
+  success: boolean;
+  error?: string;
+}
+
+export interface WindowResizeResponse {
+  success: boolean;
+  currentBounds: { x: number; y: number; width: number; height: number };
+}
+
+export interface DistractionEvent {
+  windowTitle: string;
+  processName: string;
+  matchedRule: string;
+  timestamp: number;
 }
 
 export interface FloatCompanionAPI {
   window: {
-    resize: (mode: 'orb' | 'tray', width: number, height: number) => Promise<{ success: boolean }>;
+    resize: (payload: {
+      width: number;
+      height: number;
+      mode: 'orb' | 'tray' | 'canvas' | 'custom';
+      animate?: boolean;
+    }) => Promise<WindowResizeResponse>;
     collapse: () => Promise<void>;
     expand: () => Promise<void>;
     minimize: () => Promise<void>;
     close: () => Promise<void>;
-    setIgnoreMouse: (ignore: boolean) => Promise<void>;
+    setIgnoreMouse: (ignore: boolean, forward?: boolean) => Promise<{ success: boolean }>;
   };
   os: {
-    getStats: () => Promise<SystemStats>;
-    launchApp: (appName: string) => Promise<LaunchAppResult>;
-    typeText: (text: string) => Promise<{ success: boolean }>;
+    getStats: () => Promise<SystemStatsResponse>;
+    launchApp: (target: string) => Promise<LaunchAppResponse>;
+    typeText: (text: string, delayMs?: number) => Promise<TypeTextResponse>;
   };
   focus: {
+    startSession: (payload: {
+      durationMinutes: number;
+      taskTitle: string;
+      distractionBlacklist?: string[];
+    }) => Promise<{ success: boolean; sessionStartTimestamp: number }>;
+    stopSession: () => Promise<{ success: boolean }>;
+    onDistractionDetected: (callback: (data: DistractionEvent) => void) => () => void;
+    // Backward compatibility aliases
     start: (durationMins: number, task: string) => Promise<{ success: boolean }>;
     stop: () => Promise<{ success: boolean }>;
-    onDistraction: (callback: (data: { windowTitle: string; matchedKeyword: string }) => void) => () => void;
+    onDistraction: (callback: (data: DistractionEvent) => void) => () => void;
+  };
+  store: {
+    getSecureKey: (keyName: 'groq' | 'gemini' | 'openai' | string) => Promise<{ key: string | null }>;
+    setSecureKey: (keyName: string, keyValue: string) => Promise<{ success: boolean }>;
   };
 }
 

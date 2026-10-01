@@ -34,7 +34,7 @@ export default function App() {
         setDistractionAlert({
           active: true,
           title: data.windowTitle,
-          keyword: data.matchedKeyword,
+          keyword: data.matchedRule || (data as any).matchedKeyword || 'Distraction',
         });
       });
     }
@@ -99,7 +99,7 @@ export default function App() {
     setCanvasActive(true);
     sounds.playChime();
     if (window.electronAPI?.window?.resize) {
-      await window.electronAPI.window.resize('tray', screen.width, screen.height);
+      await window.electronAPI.window.resize({ mode: 'canvas', width: screen.width, height: screen.height });
     }
   };
 

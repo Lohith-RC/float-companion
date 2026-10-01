@@ -2,25 +2,40 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
   window: {
-    resize: (mode, width, height) => ipcRenderer.invoke('window:resize', { mode, width, height }),
+    resize: (payload) => ipcRenderer.invoke('window:resize', payload),
     collapse: () => ipcRenderer.invoke('window:collapse'),
     expand: () => ipcRenderer.invoke('window:expand'),
-    minimize: () => ipcRenderer.invoke('window:minimize'),
-    close: () => ipcRenderer.invoke('window:close'),
-    setIgnoreMouse: (ignore) => ipcRenderer.invoke('window:set-ignore-mouse', { ignore }),
+    minimize: () => ipcRenderer.send('window:minimize'),
+    close: () => ipcRenderer.send('window:close'),
+    setIgnoreMouse: (ignore, forward = false) =>
+      ipcRenderer.invoke('window:set-ignore-mouse', { ignore, forward }),
   },
   os: {
-    getStats: () => ipcRenderer.invoke('os:get-stats'),
-    launchApp: (appName) => ipcRenderer.invoke('os:launch-app', { appName }),
-    typeText: (text) => ipcRenderer.invoke('os:type-text', { text }),
+    getStats: () => ipcRenderer.invoke('os:get-system-stats'),
+    launchApp: (target) => ipcRenderer.invoke('os:launch-app', { target }),
+    typeText: (text, delayMs = 150) => ipcRenderer.invoke('os:type-text', { text, delayMs }),
   },
   focus: {
-    start: (durationMins, task) => ipcRenderer.invoke('focus:start', { durationMins, task }),
-    stop: () => ipcRenderer.invoke('focus:stop'),
-    onDistraction: (callback) => {
-      const subscription = (_event, data) => callback(data);
-      ipcRenderer.on('focus:distraction', subscription);
-      return () => ipcRenderer.removeListener('focus:distraction', subscription);
+    startSession: (payload) => ipcRenderer.invoke('focus:start-session', payload),
+    stopSession: () => ipcRenderer.invoke('focus:stop-session'),
+    onDistractionDetected: (callback) => {
+      const listener = (_event, data) => callback(data);
+      ipcRenderer.on('focus:distraction-detected', listener);
+      return () => ipcRenderer.removeListener('focus:distraction-detected', listener);
     },
+    // Backward compatibility aliases
+    start: (durationMinutes, taskTitle) =>
+      ipcRenderer.invoke('focus:start-session', { durationMinutes, taskTitle }),
+    stop: () => ipcRenderer.invoke('focus:stop-session'),
+    onDistraction: (callback) => {
+      const listener = (_event, data) => callback(data);
+      ipcRenderer.on('focus:distraction-detected', listener);
+      return () => ipcRenderer.removeListener('focus:distraction-detected', listener);
+    },
+  },
+  store: {
+    getSecureKey: (keyName) => ipcRenderer.invoke('store:get-secure-key', { keyName }),
+    setSecureKey: (keyName, keyValue) =>
+      ipcRenderer.invoke('store:set-secure-key', { keyName, keyValue }),
   },
 });
