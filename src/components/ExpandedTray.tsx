@@ -1,6 +1,7 @@
 import { FC, useState, useRef, useEffect, lazy, Suspense } from 'react';
 import { AlertCircle } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
+import { useToastStore } from '../store/useToastStore';
 import { matchLocalIntent } from '../ai/fastRouter';
 import { orchestrator, ImageAttachment } from '../ai/orchestrator';
 import { sounds } from '../services/soundEffects';
@@ -132,7 +133,7 @@ export const ExpandedTray: FC<ExpandedTrayProps> = ({ onCollapse, onOpenCanvas }
         });
         sounds.playChime();
       } else {
-        alert(res.error || 'Failed to capture screen.');
+        useToastStore.getState().showToast(res.error || 'Failed to capture screen.', 'error');
       }
     }
   };
@@ -215,7 +216,9 @@ export const ExpandedTray: FC<ExpandedTrayProps> = ({ onCollapse, onOpenCanvas }
       await window.electronAPI.os.typeText(text);
     } else {
       navigator.clipboard.writeText(text);
-      alert('Copied to clipboard. Focus your background editor and press Ctrl+V.');
+      useToastStore
+        .getState()
+        .showToast('Copied to clipboard. Focus your background editor and press Ctrl+V.', 'info');
     }
   };
 

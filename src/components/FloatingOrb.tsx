@@ -11,9 +11,19 @@ export const FloatingOrb: FC<FloatingOrbProps> = ({ onExpand }) => {
   const isDistracted = Boolean(distractionAlert?.active);
 
   return (
-    <div
+    <button
+      type="button"
       onClick={onExpand}
-      className="w-full h-full flex items-center justify-center cursor-pointer select-none group drag-region relative"
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onExpand();
+        }
+      }}
+      aria-label={`FloatCompanion Orb: ${
+        isDistracted ? 'Distraction Alert Active' : isFocusing ? 'Focus Sprint In Progress' : 'Ready'
+      }. Press Enter or Space to open tray.`}
+      className="w-full h-full flex items-center justify-center cursor-pointer select-none group drag-region relative bg-transparent border-0 p-0 m-0 outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 rounded-full"
       title="FloatCompanion (Ctrl + Shift + Space)"
     >
       <div className="relative w-[66px] h-[66px] flex items-center justify-center no-drag">
@@ -98,6 +108,6 @@ export const FloatingOrb: FC<FloatingOrbProps> = ({ onExpand }) => {
           </div>
         </div>
       </div>
-    </div>
+    </button>
   );
 };

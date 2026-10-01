@@ -1,7 +1,8 @@
-import { FC, useState } from 'react';
+import { FC, useState, useEffect } from 'react';
 import { X, Key, Volume2, Shield, Trash2, Check, ExternalLink, Eye, EyeOff } from 'lucide-react';
 import { UserSettings, saveSettings, purgeAllData } from '../db/indexedDB';
 import { sounds } from '../services/soundEffects';
+import { useToastStore } from '../store/useToastStore';
 
 interface SettingsViewProps {
   settings: UserSettings;
@@ -19,19 +20,45 @@ export const SettingsView: FC<SettingsViewProps> = ({ settings, onUpdate, onClos
   const [newKeyword, setNewKeyword] = useState('');
   const [savedSuccess, setSavedSuccess] = useState(false);
 
+  // Hydrate credentials from Windows DPAPI hardware vault if available
+  useEffect(() => {
+    if (window.electronAPI?.store?.getSecureKey) {
+      window.electronAPI.store.getSecureKey('groq').then((res) => {
+        if (res.key) setGroqKey(res.key);
+      }).catch(() => {});
+      window.electronAPI.store.getSecureKey('gemini').then((res) => {
+        if (res.key) setGeminiKey(res.key);
+      }).catch(() => {});
+    }
+  }, []);
+
   const handleSave = async () => {
+    const cleanGroq = groqKey.trim();
+    const cleanGemini = geminiKey.trim();
     const updated: UserSettings = {
       ...settings,
-      groqKey: groqKey.trim(),
-      geminiKey: geminiKey.trim(),
+      groqKey: cleanGroq,
+      geminiKey: cleanGemini,
       soundEnabled,
       distractionBlacklist: blacklist,
     };
     sounds.setEnabled(soundEnabled);
     await saveSettings(updated);
+
+    // Synchronize to hardware encrypted DPAPI vault
+    if (window.electronAPI?.store?.setSecureKey) {
+      try {
+        await window.electronAPI.store.setSecureKey('groq', cleanGroq);
+        await window.electronAPI.store.setSecureKey('gemini', cleanGemini);
+      } catch (err) {
+        console.error('Failed to write to DPAPI vault', err);
+      }
+    }
+
     onUpdate(updated);
     if (soundEnabled) sounds.playChime();
     setSavedSuccess(true);
+    useToastStore.getState().showToast('Settings & DPAPI keys saved securely', 'success');
     setTimeout(() => setSavedSuccess(false), 2000);
   };
 
@@ -52,8 +79,13 @@ export const SettingsView: FC<SettingsViewProps> = ({ settings, onUpdate, onClos
   const handlePurge = async () => {
     if (confirm('Are you sure you want to delete all saved chats, tasks, and settings? This cannot be undone.')) {
       await purgeAllData();
+      if (window.electronAPI?.store?.setSecureKey) {
+        await window.electronAPI.store.setSecureKey('groq', '');
+        await window.electronAPI.store.setSecureKey('gemini', '');
+      }
       sounds.playAlert();
-      window.location.reload();
+      useToastStore.getState().showToast('All local and vault data wiped cleanly.', 'info');
+      setTimeout(() => window.location.reload(), 500);
     }
   };
 

@@ -92,28 +92,30 @@ export const TasksTab: FC<TasksTabProps> = ({
             role="listitem"
             className="group flex items-center justify-between p-2.5 rounded-xl bg-slate-900/50 border border-white/[0.06] hover:border-white/20 transition-all hover:bg-slate-900/80"
           >
-            <div
+            <button
+              type="button"
+              role="checkbox"
+              aria-checked={task.completed}
+              aria-label={`Mark task "${task.title}" as ${task.completed ? 'incomplete' : 'complete'}`}
               onClick={() => onToggleTask(task.id)}
-              className="flex items-center gap-2.5 flex-1 cursor-pointer"
+              onKeyDown={(e) => {
+                if (e.key === ' ' || e.key === 'Enter') {
+                  e.preventDefault();
+                  onToggleTask(task.id);
+                }
+              }}
+              className="flex items-center gap-2.5 flex-1 text-left bg-transparent border-0 p-0 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-1 focus-visible:ring-offset-slate-900 rounded"
             >
-              <div
-                role="checkbox"
-                aria-checked={task.completed}
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === ' ' || e.key === 'Enter') {
-                    e.preventDefault();
-                    onToggleTask(task.id);
-                  }
-                }}
-                className={`w-4 h-4 rounded-md border flex items-center justify-center transition-all focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:outline-none ${
+              <span
+                className={`w-4 h-4 rounded-md border flex items-center justify-center transition-all flex-shrink-0 ${
                   task.completed
                     ? 'bg-sky-500 border-sky-400 text-slate-950'
-                    : 'border-slate-600 hover:border-sky-400'
+                    : 'border-slate-600 group-hover:border-sky-400'
                 }`}
+                aria-hidden="true"
               >
-                {task.completed && <Check className="w-3 h-3 stroke-[3]" aria-hidden="true" />}
-              </div>
+                {task.completed && <Check className="w-3 h-3 stroke-[3]" />}
+              </span>
               <span
                 className={`text-xs transition-all ${
                   task.completed ? 'line-through text-slate-500' : 'text-slate-200 font-medium'
@@ -121,7 +123,7 @@ export const TasksTab: FC<TasksTabProps> = ({
               >
                 {task.title}
               </span>
-            </div>
+            </button>
 
             <div className="flex items-center gap-2">
               <span className="text-[10px] text-slate-500 font-tabular font-medium">{task.durationMins}m</span>

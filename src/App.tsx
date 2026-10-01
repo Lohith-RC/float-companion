@@ -3,6 +3,7 @@ import { useAppStore } from './store/useAppStore';
 import { FloatingOrb } from './components/FloatingOrb';
 import { ExpandedTray } from './components/ExpandedTray';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
+import { ToastContainer } from './components/common/ToastContainer';
 import { sounds } from './services/soundEffects';
 import { loadSavedMessages, loadSavedTasks } from './db/indexedDB';
 import { DistractionEvent } from './types/electron';
@@ -132,6 +133,8 @@ export default function App() {
         ) : (
           <ExpandedTray onCollapse={handleCollapse} onOpenCanvas={handleOpenCanvas} />
         )}
+
+        <ToastContainer />
       </main>
     </ErrorBoundary>
   );

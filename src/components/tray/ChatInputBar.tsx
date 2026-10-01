@@ -3,6 +3,8 @@ import { CornerDownLeft, Camera, Mic, MicOff, X } from 'lucide-react';
 import { ImageAttachment } from '../../ai/orchestrator';
 import { sounds } from '../../services/soundEffects';
 
+import { useToastStore } from '../../store/useToastStore';
+
 interface SpeechRecognitionEvent {
   results: {
     [index: number]: {
@@ -87,7 +89,7 @@ export const ChatInputBar: FC<ChatInputBarProps> = ({
 
   const toggleVoiceMode = () => {
     if (!recognition) {
-      alert('Speech recognition is not supported in this browser runtime.');
+      useToastStore.getState().showToast('Speech recognition is not supported in this environment.', 'warning');
       return;
     }
 
