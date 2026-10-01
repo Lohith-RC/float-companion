@@ -12,10 +12,22 @@ let focusInterval = null;
 const ORB_SIZE = { width: 68, height: 68 };
 const TRAY_SIZE = { width: 420, height: 600 };
 
-// Ensure single instance lock
-const gotTheLock = app.requestSingleInstanceLock();
-if (!gotTheLock) {
-  app.quit();
+const isDev = process.env.NODE_ENV !== 'production';
+
+// Only enforce single-instance lock in production to prevent dev restarts from quitting
+if (!isDev) {
+  const gotTheLock = app.requestSingleInstanceLock();
+  if (!gotTheLock) {
+    app.quit();
+  } else {
+    app.on('second-instance', () => {
+      if (mainWindow) {
+        if (mainWindow.isMinimized()) mainWindow.restore();
+        mainWindow.show();
+        mainWindow.focus();
+      }
+    });
+  }
 }
 
 function createMainWindow() {
@@ -45,7 +57,6 @@ function createMainWindow() {
     },
   });
 
-  const isDev = process.env.NODE_ENV !== 'production';
   const startUrl = isDev
     ? 'http://127.0.0.1:5173'
     : `file://${path.join(__dirname, '../dist/index.html')}`;
@@ -114,26 +125,29 @@ function toggleWindowMode() {
 app.whenReady().then(() => {
   createMainWindow();
 
-  // 1. Global Summon Hotkey: Ctrl+Shift+Space
+  // Global Summon Hotkey: Ctrl+Shift+Space
   globalShortcut.register('CommandOrControl+Shift+Space', () => {
     toggleWindowMode();
   });
 
-  // Tray setup
+  // Safe tray setup
   try {
-    const icon = nativeImage.createFromPath(path.join(__dirname, '../public/favicon.ico'));
-    tray = new Tray(icon.isEmpty() ? nativeImage.createEmpty() : icon);
-    const contextMenu = Menu.buildFromTemplate([
-      { label: 'Toggle Assistant (Ctrl+Shift+Space)', click: toggleWindowMode },
-      { type: 'separator' },
-      { label: 'Reset to Screen Edge', click: collapseToOrb },
-      { label: 'Quit FloatCompanion', click: () => app.quit() },
-    ]);
-    tray.setToolTip('FloatCompanion AI');
-    tray.setContextMenu(contextMenu);
-    tray.on('click', toggleWindowMode);
+    const iconPath = path.join(__dirname, '../public/favicon.ico');
+    const icon = nativeImage.createFromPath(iconPath);
+    if (!icon.isEmpty()) {
+      tray = new Tray(icon);
+      const contextMenu = Menu.buildFromTemplate([
+        { label: 'Toggle Assistant (Ctrl+Shift+Space)', click: toggleWindowMode },
+        { type: 'separator' },
+        { label: 'Reset to Screen Edge', click: collapseToOrb },
+        { label: 'Quit FloatCompanion', click: () => app.quit() },
+      ]);
+      tray.setToolTip('FloatCompanion AI');
+      tray.setContextMenu(contextMenu);
+      tray.on('click', toggleWindowMode);
+    }
   } catch (err) {
-    console.error('Tray initialization notice:', err.message);
+    // Non-fatal if icon missing
   }
 
   app.on('activate', () => {
@@ -160,7 +174,6 @@ ipcMain.handle('window:collapse', () => {
 ipcMain.handle('window:resize', (_event, { mode, width, height }) => {
   if (!mainWindow) return { success: false };
   if (width > 800) {
-    // Fullscreen canvas mode
     const primaryDisplay = screen.getPrimaryDisplay();
     const { width: sw, height: sh } = primaryDisplay.workAreaSize;
     mainWindow.setBounds({ x: 0, y: 0, width: sw, height: sh });
@@ -196,7 +209,6 @@ ipcMain.handle('os:get-stats', async () => {
 
   let storageInfo = [{ drive: 'C:', totalGB: 512, freeGB: 180, usedGB: 332 }];
 
-  // Fetch real drive stats on Windows
   if (process.platform === 'win32') {
     try {
       const psDisk = `Get-CimInstance Win32_LogicalDisk -Filter "DriveType=3" | Select-Object DeviceID, Size, FreeSpace | ConvertTo-Json`;
@@ -286,7 +298,6 @@ ipcMain.handle('os:type-text', async (_event, { text }) => {
   clipboard.writeText(text);
 
   if (process.platform === 'win32' && mainWindow) {
-    // Unfocus orb and simulate paste in target window
     mainWindow.blur();
     setTimeout(() => {
       exec(`powershell -NoProfile -Command "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SendKeys]::SendWait('^v')"`);
