@@ -19,6 +19,7 @@ import {
   HardDrive,
   CornerDownLeft,
   Zap,
+  Trash2,
 } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { matchLocalIntent } from '../ai/fastRouter';
@@ -47,6 +48,7 @@ export const ExpandedTray: FC<ExpandedTrayProps> = ({ onCollapse, onOpenCanvas }
     tasks,
     toggleTask,
     addTask,
+    removeTask,
     isFocusing,
     setFocusing,
     activeFocusTask,
@@ -120,7 +122,7 @@ export const ExpandedTray: FC<ExpandedTrayProps> = ({ onCollapse, onOpenCanvas }
       }, 1000);
     }
     return () => clearInterval(timer);
-  }, [isFocusing, secondsRemaining, activeFocusTask, selectedDuration]);
+  }, [isFocusing, secondsRemaining, activeFocusTask, selectedDuration, setFocusing]);
 
   const handleSubmit = async (e?: React.FormEvent, overridePrompt?: string) => {
     if (e) e.preventDefault();
@@ -159,60 +161,56 @@ export const ExpandedTray: FC<ExpandedTrayProps> = ({ onCollapse, onOpenCanvas }
             role: 'assistant',
             content: fullText,
           });
+          sounds.playChime();
         },
-        onError: (errMsg) => {
+        onError: (err) => {
           setIsStreaming(false);
           setStreamingContent('');
           addMessage({
             role: 'assistant',
-            content: `⚠️ ${errMsg}`,
+            content: `⚠️ Orchestration error: ${err}. Check your API keys in Settings.`,
           });
+          sounds.playAlert();
         },
       });
     } catch (err: any) {
       setIsStreaming(false);
+      setStreamingContent('');
       addMessage({
         role: 'assistant',
-        content: `⚠️ Failed to process command: ${err.message}`,
+        content: `Error: ${err.message || 'Execution failed'}`,
       });
     }
   };
 
-  const handleCopyText = (text: string, id: string) => {
-    navigator.clipboard.writeText(text);
+  const handleCopyText = (content: string, id: string) => {
+    navigator.clipboard.writeText(content);
     setCopiedId(id);
     sounds.playClick();
     setTimeout(() => setCopiedId(null), 1800);
   };
 
   const handleTypeTextToBackground = async (text: string) => {
+    sounds.playClick();
     if (window.electronAPI?.os?.typeText) {
       await window.electronAPI.os.typeText(text);
-      sounds.playChime();
+    } else {
+      navigator.clipboard.writeText(text);
+      alert('Copied to clipboard. Focus your background editor and press Ctrl+V.');
     }
   };
 
-  const startFocusSprint = (durationMins: number, taskTitle: string) => {
+  const startFocusSprint = (durationMins: number, taskTitle?: string) => {
+    sounds.playChime();
     setSelectedDuration(durationMins);
     setSecondsRemaining(durationMins * 60);
-    setFocusing(true, taskTitle, durationMins);
-    sounds.playChime();
-    if (window.electronAPI?.focus?.startSession) {
-      window.electronAPI.focus.startSession({
-        durationMinutes: durationMins,
-        taskTitle,
-        distractionBlacklist: userSettings?.distractionBlacklist,
-      });
-    }
+    setFocusing(true, taskTitle);
   };
 
   const stopFocusSprint = () => {
+    sounds.playAlert();
     setFocusing(false);
     setSecondsRemaining(selectedDuration * 60);
-    sounds.playClick();
-    if (window.electronAPI?.focus?.stopSession) {
-      window.electronAPI.focus.stopSession();
-    }
   };
 
   const formatTimer = (totalSeconds: number) => {
@@ -243,9 +241,10 @@ export const ExpandedTray: FC<ExpandedTrayProps> = ({ onCollapse, onOpenCanvas }
         )}
 
         {/* Command Header Island */}
-        <div className="h-14 px-4 flex items-center justify-between border-b border-white/[0.08] bg-slate-950/70 drag-region">
+        <div className="h-14 px-4 flex items-center justify-between border-b border-white/[0.08] bg-slate-950/80 backdrop-blur-xl drag-region">
           <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-xl bg-gradient-to-tr from-sky-500/25 to-indigo-500/25 border border-sky-400/40 flex items-center justify-center shadow-[0_0_12px_rgba(56,189,248,0.25)]">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-sky-500/25 via-indigo-500/20 to-teal-400/20 border border-sky-400/40 flex items-center justify-center shadow-[0_0_15px_rgba(56,189,248,0.25)] relative overflow-hidden">
+              <div className="absolute top-0.5 left-1 right-1 h-[1px] bg-gradient-to-r from-transparent via-white/50 to-transparent" />
               <Sparkles className="w-4 h-4 text-sky-300" />
             </div>
             <div>
@@ -256,37 +255,37 @@ export const ExpandedTray: FC<ExpandedTrayProps> = ({ onCollapse, onOpenCanvas }
                 </span>
               </div>
               <span className="text-[10px] text-slate-400 block font-tabular">
-                {userSettings?.groqKey ? '⚡ Groq Llama-3.3' : userSettings?.geminiKey ? '✨ Gemini 2.5' : '⚡ 0-Token Native'}
+                {userSettings?.groqKey ? '⚡ Groq Llama-3.3' : userSettings?.geminiKey ? '✨ Gemini 2.5 Flash' : '⚡ 0-Token Native'}
               </span>
             </div>
           </div>
 
           {/* Button-in-Button Header Cluster */}
-          <div className="flex items-center gap-1.5 no-drag bg-slate-900/60 p-1 rounded-xl border border-white/10">
+          <div className="flex items-center gap-1 no-drag bg-slate-900/70 p-1 rounded-xl border border-white/10 shadow-inner">
             <button
               onClick={onOpenCanvas}
-              className="p-1.5 text-slate-400 hover:text-sky-300 hover:bg-white/10 rounded-lg transition-colors"
+              className="p-1.5 text-slate-400 hover:text-sky-300 hover:bg-white/10 rounded-lg transition-all active:scale-95"
               title="Screen Canvas Overlay (Ctrl+Shift+C)"
             >
               <Edit3 className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={() => setSettingsOpen(true)}
-              className="p-1.5 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+              className="p-1.5 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all active:scale-95"
               title="Settings & Key Vault"
             >
               <Settings className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={onCollapse}
-              className="p-1.5 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+              className="p-1.5 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all active:scale-95"
               title="Collapse to Orb (Esc)"
             >
               <Minus className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={() => window.electronAPI?.window?.close?.() || onCollapse()}
-              className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-500/15 rounded-lg transition-colors"
+              className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-500/15 rounded-lg transition-all active:scale-95"
               title="Dismiss"
             >
               <X className="w-3.5 h-3.5" />
@@ -314,10 +313,10 @@ export const ExpandedTray: FC<ExpandedTrayProps> = ({ onCollapse, onOpenCanvas }
 
         {/* Segmented Pill Switcher Tabs */}
         <div className="px-3 pt-2 pb-1 bg-slate-950/60 border-b border-white/[0.06]">
-          <div className="flex bg-slate-900/80 p-1 rounded-xl border border-white/[0.08] text-xs gap-1">
+          <div className="flex bg-slate-900/80 p-1 rounded-xl border border-white/[0.08] text-xs gap-1 shadow-inner">
             <button
               onClick={() => setActiveTab('chat')}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg transition-all ${
+              className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg transition-all active:scale-[0.98] ${
                 activeTab === 'chat'
                   ? 'bg-sky-500/20 text-sky-300 font-semibold shadow-sm border border-sky-400/30'
                   : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
@@ -329,7 +328,7 @@ export const ExpandedTray: FC<ExpandedTrayProps> = ({ onCollapse, onOpenCanvas }
 
             <button
               onClick={() => setActiveTab('tasks')}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg transition-all ${
+              className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg transition-all active:scale-[0.98] ${
                 activeTab === 'tasks'
                   ? 'bg-sky-500/20 text-sky-300 font-semibold shadow-sm border border-sky-400/30'
                   : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
@@ -344,7 +343,7 @@ export const ExpandedTray: FC<ExpandedTrayProps> = ({ onCollapse, onOpenCanvas }
 
             <button
               onClick={() => setActiveTab('focus')}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg transition-all ${
+              className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg transition-all active:scale-[0.98] ${
                 activeTab === 'focus'
                   ? 'bg-amber-500/20 text-amber-300 font-semibold shadow-sm border border-amber-400/30'
                   : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
@@ -357,7 +356,7 @@ export const ExpandedTray: FC<ExpandedTrayProps> = ({ onCollapse, onOpenCanvas }
 
             <button
               onClick={() => setActiveTab('stats')}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg transition-all ${
+              className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg transition-all active:scale-[0.98] ${
                 activeTab === 'stats'
                   ? 'bg-sky-500/20 text-sky-300 font-semibold shadow-sm border border-sky-400/30'
                   : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
@@ -382,8 +381,8 @@ export const ExpandedTray: FC<ExpandedTrayProps> = ({ onCollapse, onOpenCanvas }
                   <div
                     className={`max-w-[92%] px-3.5 py-2.5 rounded-2xl leading-relaxed text-xs relative group ${
                       msg.role === 'user'
-                        ? 'bg-gradient-to-br from-sky-600 to-indigo-600 text-white rounded-tr-sm shadow-md shadow-sky-950/40 border border-sky-400/30'
-                        : 'bg-slate-900/90 text-slate-200 rounded-tl-sm border border-white/10 shadow-sm'
+                        ? 'bg-gradient-to-br from-sky-600 via-sky-600 to-indigo-600 text-white rounded-tr-sm shadow-lg shadow-sky-950/40 border border-sky-400/30'
+                        : 'bg-slate-900/90 text-slate-200 rounded-tl-sm border border-white/10 shadow-md backdrop-blur-md'
                     }`}
                   >
                     <div className="whitespace-pre-wrap">{msg.content}</div>
@@ -423,7 +422,7 @@ export const ExpandedTray: FC<ExpandedTrayProps> = ({ onCollapse, onOpenCanvas }
               {/* Live Streaming Indicator */}
               {isStreaming && (
                 <div className="flex flex-col items-start">
-                  <div className="max-w-[92%] px-3.5 py-2.5 rounded-2xl bg-slate-900/90 text-slate-200 rounded-tl-sm border border-sky-500/40 text-xs shadow-xl">
+                  <div className="max-w-[92%] px-3.5 py-2.5 rounded-2xl bg-slate-900/90 text-slate-200 rounded-tl-sm border border-sky-500/40 text-xs shadow-xl backdrop-blur-md">
                     <div className="whitespace-pre-wrap">{streamingContent || 'Synthesizing response...'}</div>
                     <div className="mt-1.5 text-[10px] text-sky-400 font-tabular flex items-center gap-1.5 animate-pulse">
                       <RotateCw className="w-3 h-3 animate-spin" />
@@ -441,7 +440,7 @@ export const ExpandedTray: FC<ExpandedTrayProps> = ({ onCollapse, onOpenCanvas }
           {activeTab === 'tasks' && (
             <div className="space-y-3">
               {/* Progress Summary Card */}
-              <div className="p-3 bg-slate-900/70 rounded-xl border border-white/10 space-y-1.5">
+              <div className="p-3 bg-slate-900/70 rounded-xl border border-white/10 space-y-2 shadow-inner">
                 <div className="flex justify-between items-center text-xs">
                   <span className="text-slate-300 font-semibold">Sprint Velocity</span>
                   <span className="font-tabular font-bold text-sky-400">
@@ -450,14 +449,14 @@ export const ExpandedTray: FC<ExpandedTrayProps> = ({ onCollapse, onOpenCanvas }
                 </div>
                 <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
                   <div
-                    className="bg-gradient-to-r from-sky-500 to-emerald-400 h-full rounded-full transition-all duration-500"
+                    className="bg-gradient-to-r from-sky-500 via-teal-400 to-emerald-400 h-full rounded-full transition-all duration-500 shadow-[0_0_8px_rgba(56,189,248,0.5)]"
                     style={{ width: `${taskProgressPercent}%` }}
                   />
                 </div>
               </div>
 
               {/* Add Task Input */}
-              <div className="flex items-center gap-2 bg-slate-900/60 p-1.5 rounded-xl border border-white/10">
+              <div className="flex items-center gap-2 bg-slate-900/70 p-1.5 rounded-xl border border-white/10 shadow-inner">
                 <input
                   type="text"
                   value={newTaskTitle}
@@ -478,7 +477,7 @@ export const ExpandedTray: FC<ExpandedTrayProps> = ({ onCollapse, onOpenCanvas }
                       setNewTaskTitle('');
                     }
                   }}
-                  className="px-3 py-1 bg-sky-600 hover:bg-sky-500 text-white rounded-lg text-xs font-semibold shadow-sm transition-all"
+                  className="px-3 py-1 bg-sky-600 hover:bg-sky-500 text-white rounded-lg text-xs font-semibold shadow-sm transition-all active:scale-95"
                 >
                   Add
                 </button>
@@ -489,25 +488,40 @@ export const ExpandedTray: FC<ExpandedTrayProps> = ({ onCollapse, onOpenCanvas }
                 {tasks.map((task) => (
                   <div
                     key={task.id}
-                    onClick={() => toggleTask(task.id)}
-                    className="flex items-center justify-between p-2.5 rounded-xl bg-slate-900/50 border border-white/[0.06] hover:border-white/20 cursor-pointer transition-all hover:translate-x-0.5"
+                    className="group flex items-center justify-between p-2.5 rounded-xl bg-slate-900/50 border border-white/[0.06] hover:border-white/20 transition-all hover:bg-slate-900/80"
                   >
-                    <div className="flex items-center gap-2.5">
-                      <input
-                        type="checkbox"
-                        checked={task.completed}
-                        onChange={() => {}}
-                        className="rounded border-slate-700 text-sky-500 focus:ring-0 w-3.5 h-3.5"
-                      />
+                    <div
+                      onClick={() => toggleTask(task.id)}
+                      className="flex items-center gap-2.5 flex-1 cursor-pointer"
+                    >
+                      <div
+                        className={`w-4 h-4 rounded-md border flex items-center justify-center transition-all ${
+                          task.completed
+                            ? 'bg-sky-500 border-sky-400 text-slate-950'
+                            : 'border-slate-600 hover:border-sky-400'
+                        }`}
+                      >
+                        {task.completed && <Check className="w-3 h-3 stroke-[3]" />}
+                      </div>
                       <span
-                        className={`text-xs ${
+                        className={`text-xs transition-all ${
                           task.completed ? 'line-through text-slate-500' : 'text-slate-200 font-medium'
                         }`}
                       >
                         {task.title}
                       </span>
                     </div>
-                    <span className="text-[10px] text-slate-500 font-tabular font-medium">{task.durationMins}m</span>
+
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-slate-500 font-tabular font-medium">{task.durationMins}m</span>
+                      <button
+                        onClick={() => removeTask(task.id)}
+                        className="opacity-0 group-hover:opacity-100 p-1 text-slate-500 hover:text-red-400 transition-opacity"
+                        title="Delete task"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -519,7 +533,7 @@ export const ExpandedTray: FC<ExpandedTrayProps> = ({ onCollapse, onOpenCanvas }
             <div className="h-full flex flex-col items-center justify-center p-2 text-center space-y-4">
               {/* Duration Preset Pills */}
               {!isFocusing && (
-                <div className="flex items-center gap-1 bg-slate-900/70 p-1 rounded-xl border border-white/10">
+                <div className="flex items-center gap-1 bg-slate-900/70 p-1 rounded-xl border border-white/10 shadow-inner">
                   {[15, 25, 45, 60].map((dur) => (
                     <button
                       key={dur}
@@ -528,7 +542,7 @@ export const ExpandedTray: FC<ExpandedTrayProps> = ({ onCollapse, onOpenCanvas }
                         setSecondsRemaining(dur * 60);
                         sounds.playClick();
                       }}
-                      className={`px-3 py-1 rounded-lg text-[11px] font-tabular font-semibold transition-all ${
+                      className={`px-3 py-1 rounded-lg text-[11px] font-tabular font-semibold transition-all active:scale-95 ${
                         selectedDuration === dur
                           ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-950/30'
                           : 'text-slate-400 hover:text-white'
@@ -540,20 +554,20 @@ export const ExpandedTray: FC<ExpandedTrayProps> = ({ onCollapse, onOpenCanvas }
                 </div>
               )}
 
-              <div className="relative w-40 h-40 flex items-center justify-center">
+              <div className="relative w-44 h-44 flex items-center justify-center">
                 {/* SVG Circular Progress Track */}
                 <svg className="w-full h-full transform -rotate-90">
                   <circle
-                    cx="80"
-                    cy="80"
+                    cx="88"
+                    cy="88"
                     r="54"
                     stroke="rgba(245, 158, 11, 0.15)"
                     strokeWidth="6"
                     fill="transparent"
                   />
                   <circle
-                    cx="80"
-                    cy="80"
+                    cx="88"
+                    cy="88"
                     r="54"
                     stroke={isFocusing ? '#F59E0B' : 'rgba(245, 158, 11, 0.4)'}
                     strokeWidth="6"
@@ -561,13 +575,13 @@ export const ExpandedTray: FC<ExpandedTrayProps> = ({ onCollapse, onOpenCanvas }
                     strokeDashoffset={isFocusing ? strokeOffset : 0}
                     strokeLinecap="round"
                     fill="transparent"
-                    className="transition-all duration-1000 ease-linear"
+                    className="transition-all duration-1000 ease-linear shadow-[0_0_12px_rgba(245,158,11,0.5)]"
                   />
                 </svg>
 
                 {/* Center Chronograph Digits */}
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-3xl font-extrabold font-tabular text-amber-300 drop-shadow-[0_0_12px_rgba(245,158,11,0.4)]">
+                  <span className="text-3xl font-extrabold font-tabular text-amber-300 drop-shadow-[0_0_15px_rgba(245,158,11,0.5)]">
                     {formatTimer(secondsRemaining)}
                   </span>
                   <span className="text-[9px] uppercase tracking-[0.18em] font-semibold text-slate-400 mt-1">
@@ -583,7 +597,7 @@ export const ExpandedTray: FC<ExpandedTrayProps> = ({ onCollapse, onOpenCanvas }
                   </p>
                   <button
                     onClick={stopFocusSprint}
-                    className="w-full py-2 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2 shadow-lg shadow-red-950/50"
+                    className="w-full py-2 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2 shadow-lg shadow-red-950/50 active:scale-95 transition-all"
                   >
                     <Square className="w-3.5 h-3.5 fill-current" />
                     <span>End Sprint</span>
@@ -596,7 +610,7 @@ export const ExpandedTray: FC<ExpandedTrayProps> = ({ onCollapse, onOpenCanvas }
                   </p>
                   <button
                     onClick={() => startFocusSprint(selectedDuration, `Sprint (${selectedDuration}m)`)}
-                    className="w-full py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-lg shadow-amber-950/40 transition-all hover:scale-[1.02]"
+                    className="w-full py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-lg shadow-amber-950/40 transition-all hover:scale-[1.02] active:scale-95"
                   >
                     <Play className="w-3.5 h-3.5 fill-current" />
                     <span>Start {selectedDuration}-Min Sprint</span>
@@ -622,7 +636,7 @@ export const ExpandedTray: FC<ExpandedTrayProps> = ({ onCollapse, onOpenCanvas }
 
               {systemStats ? (
                 <div className="space-y-2">
-                  <div className="p-3 bg-slate-900/60 rounded-xl border border-white/10 space-y-1.5">
+                  <div className="p-3 bg-slate-900/60 rounded-xl border border-white/10 space-y-1.5 shadow-inner">
                     <div className="flex justify-between text-xs text-slate-400">
                       <span>Memory Load</span>
                       <span className="font-tabular font-semibold text-sky-300">
@@ -631,25 +645,25 @@ export const ExpandedTray: FC<ExpandedTrayProps> = ({ onCollapse, onOpenCanvas }
                     </div>
                     <div className="w-full bg-slate-800/80 rounded-full h-2 overflow-hidden p-0.5 border border-white/5">
                       <div
-                        className="bg-gradient-to-r from-sky-500 to-indigo-500 h-full rounded-full transition-all duration-700"
+                        className="bg-gradient-to-r from-sky-500 via-indigo-500 to-teal-400 h-full rounded-full transition-all duration-700 shadow-[0_0_10px_rgba(56,189,248,0.5)]"
                         style={{ width: `${systemStats.memory.usagePercent}%` }}
                       />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className="p-2.5 bg-slate-900/60 rounded-xl border border-white/10">
+                    <div className="p-2.5 bg-slate-900/60 rounded-xl border border-white/10 shadow-inner">
                       <span className="text-slate-500 block text-[10px] font-tabular">Available RAM</span>
                       <span className="font-tabular text-slate-100 font-bold text-sm">{systemStats.memory.freeGB} GB</span>
                     </div>
-                    <div className="p-2.5 bg-slate-900/60 rounded-xl border border-white/10">
+                    <div className="p-2.5 bg-slate-900/60 rounded-xl border border-white/10 shadow-inner">
                       <span className="text-slate-500 block text-[10px] font-tabular">Platform</span>
                       <span className="font-tabular text-slate-100 font-bold text-sm uppercase">{systemStats.platform}</span>
                     </div>
                   </div>
 
                   {systemStats.storage && (
-                    <div className="p-2.5 bg-slate-900/60 rounded-xl border border-white/10 flex items-center justify-between">
+                    <div className="p-2.5 bg-slate-900/60 rounded-xl border border-white/10 flex items-center justify-between shadow-inner">
                       <div className="flex items-center gap-2">
                         <HardDrive className="w-4 h-4 text-slate-400" />
                         <div>
@@ -674,7 +688,7 @@ export const ExpandedTray: FC<ExpandedTrayProps> = ({ onCollapse, onOpenCanvas }
 
         {/* Floating Quick Action Chips & Input Command Bar */}
         {activeTab === 'chat' && (
-          <div className="p-2.5 border-t border-white/[0.08] bg-slate-950/80 space-y-2">
+          <div className="p-2.5 border-t border-white/[0.08] bg-slate-950/90 backdrop-blur-md space-y-2">
             {/* Quick Suggestions Chips */}
             <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 no-scrollbar">
               {[
@@ -686,7 +700,7 @@ export const ExpandedTray: FC<ExpandedTrayProps> = ({ onCollapse, onOpenCanvas }
                 <button
                   key={chip.label}
                   onClick={() => handleSubmit(undefined, chip.prompt)}
-                  className="px-2 py-0.5 bg-slate-900/80 hover:bg-slate-800 text-[10px] font-tabular text-slate-300 hover:text-white rounded-full border border-white/10 transition-colors whitespace-nowrap"
+                  className="px-2.5 py-1 bg-slate-900/90 hover:bg-slate-800 text-[10px] font-tabular text-slate-300 hover:text-white rounded-full border border-white/10 transition-all active:scale-95 whitespace-nowrap shadow-sm hover:border-white/20"
                 >
                   {chip.label}
                 </button>

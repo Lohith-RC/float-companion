@@ -1,5 +1,6 @@
 import { FC, useRef, useState, useEffect } from 'react';
 import { Pen, Highlighter, Eraser, RotateCcw, X } from 'lucide-react';
+import { sounds } from '../services/soundEffects';
 
 interface ScreenCanvasProps {
   onClose: () => void;
@@ -73,10 +74,11 @@ export const ScreenCanvas: FC<ScreenCanvasProps> = ({ onClose }) => {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    sounds.playClick();
   };
 
   return (
-    <div className="fixed inset-0 z-[100] cursor-crosshair select-none bg-black/10 backdrop-blur-[0.5px]">
+    <div className="fixed inset-0 z-[100] cursor-crosshair select-none bg-black/15 backdrop-blur-[0.5px]">
       <canvas
         ref={canvasRef}
         onMouseDown={startDrawing}
@@ -87,11 +89,14 @@ export const ScreenCanvas: FC<ScreenCanvasProps> = ({ onClose }) => {
       />
 
       {/* Floating Canvas Toolbar */}
-      <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-slate-900/90 border border-white/15 px-3 py-1.5 rounded-2xl flex items-center gap-2 shadow-2xl backdrop-blur-md">
+      <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-slate-900/90 border border-white/20 px-3 py-1.5 rounded-2xl flex items-center gap-2 shadow-2xl backdrop-blur-xl">
         <button
-          onClick={() => setTool('pen')}
-          className={`p-1.5 rounded-lg transition-colors ${
-            tool === 'pen' ? 'bg-sky-500/20 text-sky-400 border border-sky-400/30' : 'text-slate-400 hover:text-white'
+          onClick={() => {
+            setTool('pen');
+            sounds.playClick();
+          }}
+          className={`p-1.5 rounded-lg transition-all active:scale-95 ${
+            tool === 'pen' ? 'bg-sky-500/20 text-sky-400 border border-sky-400/30 shadow-sm' : 'text-slate-400 hover:text-white'
           }`}
           title="Pen Tool"
         >
@@ -99,9 +104,12 @@ export const ScreenCanvas: FC<ScreenCanvasProps> = ({ onClose }) => {
         </button>
 
         <button
-          onClick={() => setTool('highlighter')}
-          className={`p-1.5 rounded-lg transition-colors ${
-            tool === 'highlighter' ? 'bg-amber-500/20 text-amber-400 border border-amber-400/30' : 'text-slate-400 hover:text-white'
+          onClick={() => {
+            setTool('highlighter');
+            sounds.playClick();
+          }}
+          className={`p-1.5 rounded-lg transition-all active:scale-95 ${
+            tool === 'highlighter' ? 'bg-amber-500/20 text-amber-400 border border-amber-400/30 shadow-sm' : 'text-slate-400 hover:text-white'
           }`}
           title="Highlighter"
         >
@@ -109,8 +117,11 @@ export const ScreenCanvas: FC<ScreenCanvasProps> = ({ onClose }) => {
         </button>
 
         <button
-          onClick={() => setTool('eraser')}
-          className={`p-1.5 rounded-lg transition-colors ${
+          onClick={() => {
+            setTool('eraser');
+            sounds.playClick();
+          }}
+          className={`p-1.5 rounded-lg transition-all active:scale-95 ${
             tool === 'eraser' ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white'
           }`}
           title="Eraser"
@@ -119,13 +130,16 @@ export const ScreenCanvas: FC<ScreenCanvasProps> = ({ onClose }) => {
         </button>
 
         {/* Color presets */}
-        <div className="flex items-center gap-1 px-1 border-l border-r border-white/10">
+        <div className="flex items-center gap-1.5 px-2 border-l border-r border-white/10">
           {['#38bdf8', '#ef4444', '#10b981', '#f59e0b', '#ffffff'].map((c) => (
             <button
               key={c}
-              onClick={() => setColor(c)}
+              onClick={() => {
+                setColor(c);
+                sounds.playClick();
+              }}
               className={`w-3.5 h-3.5 rounded-full transition-transform ${
-                color === c ? 'scale-125 ring-2 ring-white/50' : 'opacity-70 hover:opacity-100'
+                color === c ? 'scale-125 ring-2 ring-white/70 shadow-sm' : 'opacity-70 hover:opacity-100'
               }`}
               style={{ backgroundColor: c }}
             />
@@ -134,15 +148,18 @@ export const ScreenCanvas: FC<ScreenCanvasProps> = ({ onClose }) => {
 
         <button
           onClick={clearCanvas}
-          className="p-1.5 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+          className="p-1.5 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all active:scale-95"
           title="Clear Screen"
         >
           <RotateCcw className="w-4 h-4" />
         </button>
 
         <button
-          onClick={onClose}
-          className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors ml-1"
+          onClick={() => {
+            sounds.playClick();
+            onClose();
+          }}
+          className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-500/15 rounded-lg transition-all active:scale-95 ml-1"
           title="Exit Canvas (Esc)"
         >
           <X className="w-4 h-4" />

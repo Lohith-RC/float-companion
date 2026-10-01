@@ -31,6 +31,7 @@ interface AppState {
   clearMessages: () => void;
   addTask: (title: string, durationMins?: number) => void;
   toggleTask: (id: string) => void;
+  removeTask: (id: string) => void;
   setFocusing: (isFocusing: boolean, task?: string, duration?: number) => void;
   setDistractionAlert: (alert: { active: boolean; title: string; keyword: string } | null) => void;
 }
@@ -86,6 +87,10 @@ export const useAppStore = create<AppState>((set) => ({
   toggleTask: (id) =>
     set((state) => ({
       tasks: state.tasks.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t)),
+    })),
+  removeTask: (id) =>
+    set((state) => ({
+      tasks: state.tasks.filter((t) => t.id !== id),
     })),
   setFocusing: (isFocusing, task = '', duration = 25) =>
     set({
