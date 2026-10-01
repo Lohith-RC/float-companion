@@ -1,3 +1,5 @@
+import { getErrorMessage } from '../utils/errorUtils';
+
 export interface RouterResult {
   handled: boolean;
   reply?: string;
@@ -42,10 +44,10 @@ export async function matchLocalIntent(prompt: string): Promise<RouterResult> {
           action: 'showed_stats',
           reply: `📊 **Native System Hardware Status:**\n- **Memory In Use:** \`${stats.memory.usedGB} GB\` / \`${stats.memory.totalGB} GB\` (${stats.memory.usagePercent}%)\n- **Free RAM Available:** \`${stats.memory.freeGB} GB\`\n- **OS Platform:** \`${stats.platform}\`\n*(Zero-Token Native Hardware Query)*`,
         };
-      } catch (err: any) {
+      } catch (err: unknown) {
         return {
           handled: true,
-          reply: `⚠️ Failed to fetch native hardware stats: ${err.message}`,
+          reply: `⚠️ Failed to fetch native hardware stats: ${getErrorMessage(err)}`,
         };
       }
     }

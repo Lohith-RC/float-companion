@@ -2,6 +2,8 @@ import { ChatMessage } from '../store/useAppStore';
 import { prepareOptimizedContext, PromptMessage } from './contextCompressor';
 import { UserSettings } from '../db/indexedDB';
 
+import { getErrorMessage } from '../utils/errorUtils';
+
 export interface StreamCallbacks {
   onChunk: (chunk: string) => void;
   onDone: (fullText: string) => void;
@@ -35,19 +37,20 @@ export class AIOrchestrator {
       try {
         await this.streamGroq(messages, settings.groqKey.trim(), signal, callbacks);
         return;
-      } catch (err: any) {
-        if (err.name === 'AbortError') return;
-        console.warn('Groq stream failed or rate-limited, attempting fallback:', err.message);
+      } catch (err: unknown) {
+        if (err instanceof Error && err.name === 'AbortError') return;
+        const msg = getErrorMessage(err);
+        console.warn('Groq stream failed or rate-limited, attempting fallback:', msg);
         // Fallback to Gemini if key available
         if (settings.geminiKey?.trim()) {
           try {
             await this.streamGemini(prompt, settings.geminiKey.trim(), signal, callbacks);
             return;
-          } catch (geminiErr: any) {
-            console.error('Gemini fallback failed:', geminiErr.message);
+          } catch (geminiErr: unknown) {
+            console.error('Gemini fallback failed:', getErrorMessage(geminiErr));
           }
         }
-        callbacks.onError(`Groq Error: ${err.message}. (Check API key in Settings)`);
+        callbacks.onError(`Groq Error: ${msg}. (Check API key in Settings)`);
         return;
       }
     }
@@ -57,9 +60,9 @@ export class AIOrchestrator {
       try {
         await this.streamGemini(prompt, settings.geminiKey.trim(), signal, callbacks);
         return;
-      } catch (err: any) {
-        if (err.name === 'AbortError') return;
-        callbacks.onError(`Gemini Error: ${err.message}. (Check API key in Settings)`);
+      } catch (err: unknown) {
+        if (err instanceof Error && err.name === 'AbortError') return;
+        callbacks.onError(`Gemini Error: ${getErrorMessage(err)}. (Check API key in Settings)`);
         return;
       }
     }

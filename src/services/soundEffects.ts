@@ -3,6 +3,10 @@
  * Uses Web Audio API for zero-dependency, ultra-low latency acoustic cues.
  */
 
+interface WebkitWindow extends Window {
+  webkitAudioContext?: typeof AudioContext;
+}
+
 class SoundEngine {
   private ctx: AudioContext | null = null;
   private enabled: boolean = true;
@@ -10,7 +14,7 @@ class SoundEngine {
   private getContext(): AudioContext | null {
     if (!this.enabled) return null;
     if (!this.ctx && typeof window !== 'undefined') {
-      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      const AudioCtx = window.AudioContext || (window as unknown as WebkitWindow).webkitAudioContext;
       if (AudioCtx) {
         this.ctx = new AudioCtx();
       }

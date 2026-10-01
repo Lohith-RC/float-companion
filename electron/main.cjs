@@ -278,6 +278,15 @@ ipcMain.handle('os:launch-app', async (_event, payload) => {
   const targetRaw = (payload?.target || payload?.appName || '').trim();
   const normalized = targetRaw.toLowerCase();
 
+  // Enterprise input sanitation: Enforce strict character whitelist and length bounds
+  if (!targetRaw || !/^[a-zA-Z0-9_\-\.\:\s]{1,64}$/.test(targetRaw)) {
+    return {
+      success: false,
+      actionTaken: 'not_found',
+      error: 'Security Violation: Target app name contains illegal characters or exceeds length limits.',
+    };
+  }
+
   // Validate command against security kernel
   const sec = validateCommand(targetRaw);
   if (!sec.safe) {

@@ -1,16 +1,22 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, lazy, Suspense } from 'react';
 import { useAppStore } from './store/useAppStore';
 import { FloatingOrb } from './components/FloatingOrb';
 import { ExpandedTray } from './components/ExpandedTray';
-import { ScreenCanvas } from './components/ScreenCanvas';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { sounds } from './services/soundEffects';
 import { loadSavedMessages, loadSavedTasks } from './db/indexedDB';
+import { DistractionEvent } from './types/electron';
+
+// Code-split heavy full-screen canvas overlay
+const ScreenCanvas = lazy(() =>
+  import('./components/ScreenCanvas').then((mod) => ({ default: mod.ScreenCanvas }))
+);
 
 export default function App() {
   const { mode, setMode, setDistractionAlert, setFocusing, isFocusing } = useAppStore();
   const [canvasActive, setCanvasActive] = useState(false);
 
-  // Restore messages and tasks from IndexedDB on startup
+  // Restore messages and tasks from local IndexedDB on startup
   useEffect(() => {
     loadSavedMessages().then((msgs) => {
       if (msgs && msgs.length > 0) {
@@ -29,17 +35,17 @@ export default function App() {
   useEffect(() => {
     let unsubscribeDistraction: (() => void) | undefined;
     if (window.electronAPI?.focus?.onDistraction) {
-      unsubscribeDistraction = window.electronAPI.focus.onDistraction((data) => {
+      unsubscribeDistraction = window.electronAPI.focus.onDistraction((data: DistractionEvent) => {
         sounds.playAlert();
         setDistractionAlert({
           active: true,
           title: data.windowTitle,
-          keyword: data.matchedRule || (data as any).matchedKeyword || 'Distraction',
+          keyword: data.matchedRule || 'Distraction',
         });
       });
     }
 
-    // Keyboard Shortcuts
+    // Global in-app shortcuts
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         if (canvasActive) {
@@ -77,7 +83,7 @@ export default function App() {
       unsubscribeDistraction?.();
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [mode, canvasActive, isFocusing]);
+  }, [mode, canvasActive, isFocusing, setDistractionAlert, setFocusing]);
 
   const handleExpand = async () => {
     setMode('tray');
@@ -113,14 +119,20 @@ export default function App() {
   };
 
   return (
-    <div className="w-screen h-screen flex items-center justify-center p-0.5 select-none bg-transparent">
-      {canvasActive && <ScreenCanvas onClose={handleCloseCanvas} />}
+    <ErrorBoundary>
+      <main className="w-screen h-screen flex items-center justify-center p-0.5 select-none bg-transparent">
+        {canvasActive && (
+          <Suspense fallback={<div className="fixed inset-0 bg-black/20 backdrop-blur-sm" />}>
+            <ScreenCanvas onClose={handleCloseCanvas} />
+          </Suspense>
+        )}
 
-      {mode === 'orb' ? (
-        <FloatingOrb onExpand={handleExpand} />
-      ) : (
-        <ExpandedTray onCollapse={handleCollapse} onOpenCanvas={handleOpenCanvas} />
-      )}
-    </div>
+        {mode === 'orb' ? (
+          <FloatingOrb onExpand={handleExpand} />
+        ) : (
+          <ExpandedTray onCollapse={handleCollapse} onOpenCanvas={handleOpenCanvas} />
+        )}
+      </main>
+    </ErrorBoundary>
   );
 }
