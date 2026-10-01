@@ -1,11 +1,11 @@
-const { app, BrowserWindow, ipcMain, globalShortcut, screen, Tray, Menu, nativeImage } = require('electron');
+const { app, BrowserWindow, ipcMain, globalShortcut, screen, Tray, Menu, nativeImage, clipboard } = require('electron');
 const path = require('path');
-const { spawn, exec } = require('child_process');
+const { exec } = require('child_process');
 const os = require('os');
 
 let mainWindow = null;
 let tray = null;
-let currentMode = 'orb'; // 'orb' | 'tray'
+let currentMode = 'orb'; // 'orb' | 'tray' | 'canvas'
 let lastOrbPosition = { x: 0, y: 0 };
 let focusInterval = null;
 
@@ -22,7 +22,6 @@ function createMainWindow() {
   const primaryDisplay = screen.getPrimaryDisplay();
   const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
 
-  // Default initial position near bottom right
   const initialX = screenWidth - ORB_SIZE.width - 24;
   const initialY = screenHeight - ORB_SIZE.height - 40;
   lastOrbPosition = { x: initialX, y: initialY };
@@ -48,12 +47,12 @@ function createMainWindow() {
 
   const isDev = process.env.NODE_ENV !== 'production';
   const startUrl = isDev
-    ? 'http://localhost:5173'
+    ? 'http://127.0.0.1:5173'
     : `file://${path.join(__dirname, '../dist/index.html')}`;
 
   mainWindow.loadURL(startUrl);
 
-  // Set window level to float over normal windows
+  // Set window level to float seamlessly
   mainWindow.setAlwaysOnTop(true, 'screen-saver');
 
   mainWindow.on('closed', () => {
@@ -66,15 +65,12 @@ function expandToTray() {
   const primaryDisplay = screen.getPrimaryDisplay();
   const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
 
-  // Save current orb position
   const currentBounds = mainWindow.getBounds();
   lastOrbPosition = { x: currentBounds.x, y: currentBounds.y };
 
-  // Calculate new Tray bounds pinned to current area or bottom-right
   let newX = currentBounds.x + currentBounds.width - TRAY_SIZE.width;
   let newY = currentBounds.y + currentBounds.height - TRAY_SIZE.height;
 
-  // Keep within screen bounds
   if (newX < 10) newX = 10;
   if (newX + TRAY_SIZE.width > screenWidth) newX = screenWidth - TRAY_SIZE.width - 10;
   if (newY < 10) newY = 10;
@@ -118,24 +114,20 @@ function toggleWindowMode() {
 app.whenReady().then(() => {
   createMainWindow();
 
-  // Register Global Hotkey: Ctrl+Shift+Space
-  const registered = globalShortcut.register('CommandOrControl+Shift+Space', () => {
+  // 1. Global Summon Hotkey: Ctrl+Shift+Space
+  globalShortcut.register('CommandOrControl+Shift+Space', () => {
     toggleWindowMode();
   });
-
-  if (!registered) {
-    console.warn('Failed to register global shortcut: Ctrl+Shift+Space');
-  }
 
   // Tray setup
   try {
     const icon = nativeImage.createFromPath(path.join(__dirname, '../public/favicon.ico'));
     tray = new Tray(icon.isEmpty() ? nativeImage.createEmpty() : icon);
     const contextMenu = Menu.buildFromTemplate([
-      { label: 'Toggle FloatCompanion (Ctrl+Shift+Space)', click: toggleWindowMode },
+      { label: 'Toggle Assistant (Ctrl+Shift+Space)', click: toggleWindowMode },
       { type: 'separator' },
       { label: 'Reset to Screen Edge', click: collapseToOrb },
-      { label: 'Quit', click: () => app.quit() },
+      { label: 'Quit FloatCompanion', click: () => app.quit() },
     ]);
     tray.setToolTip('FloatCompanion AI');
     tray.setContextMenu(contextMenu);
@@ -167,7 +159,13 @@ ipcMain.handle('window:collapse', () => {
 
 ipcMain.handle('window:resize', (_event, { mode, width, height }) => {
   if (!mainWindow) return { success: false };
-  if (mode === 'tray') {
+  if (width > 800) {
+    // Fullscreen canvas mode
+    const primaryDisplay = screen.getPrimaryDisplay();
+    const { width: sw, height: sh } = primaryDisplay.workAreaSize;
+    mainWindow.setBounds({ x: 0, y: 0, width: sw, height: sh });
+    currentMode = 'canvas';
+  } else if (mode === 'tray') {
     expandToTray();
   } else {
     collapseToOrb();
@@ -185,7 +183,7 @@ ipcMain.handle('window:minimize', () => {
   return { success: true };
 });
 
-// OS System Stats Handler (Fast zero-token native hardware info)
+// OS System Stats Handler (Zero-Token Real Hardware Telemetry)
 ipcMain.handle('os:get-stats', async () => {
   const totalMemBytes = os.totalmem();
   const freeMemBytes = os.freemem();
@@ -196,6 +194,34 @@ ipcMain.handle('os:get-stats', async () => {
   const usedGB = parseFloat((usedMemBytes / (1024 ** 3)).toFixed(2));
   const usagePercent = Math.round((usedMemBytes / totalMemBytes) * 100);
 
+  let storageInfo = [{ drive: 'C:', totalGB: 512, freeGB: 180, usedGB: 332 }];
+
+  // Fetch real drive stats on Windows
+  if (process.platform === 'win32') {
+    try {
+      const psDisk = `Get-CimInstance Win32_LogicalDisk -Filter "DriveType=3" | Select-Object DeviceID, Size, FreeSpace | ConvertTo-Json`;
+      const stdout = await new Promise((res) => {
+        exec(`powershell -NoProfile -Command "${psDisk}"`, { timeout: 2000 }, (_err, out) => res(out));
+      });
+      if (stdout) {
+        const parsed = JSON.parse(stdout);
+        const disks = Array.isArray(parsed) ? parsed : [parsed];
+        storageInfo = disks.map((d) => {
+          const sizeGB = Math.round(Number(d.Size) / (1024 ** 3));
+          const freeSpaceGB = Math.round(Number(d.FreeSpace) / (1024 ** 3));
+          return {
+            drive: d.DeviceID,
+            totalGB: sizeGB,
+            freeGB: freeSpaceGB,
+            usedGB: sizeGB - freeSpaceGB,
+          };
+        });
+      }
+    } catch {
+      // Fallback
+    }
+  }
+
   return {
     memory: {
       totalGB,
@@ -203,9 +229,7 @@ ipcMain.handle('os:get-stats', async () => {
       freeGB,
       usagePercent,
     },
-    storage: [
-      { drive: 'C:', totalGB: 512, freeGB: 180, usedGB: 332 }, // Default fallback or populated via PowerShell
-    ],
+    storage: storageInfo,
     platform: process.platform,
     uptimeSeconds: Math.round(os.uptime()),
   };
@@ -214,7 +238,7 @@ ipcMain.handle('os:get-stats', async () => {
 // OS App Launcher
 ipcMain.handle('os:launch-app', async (_event, { appName }) => {
   const normalized = (appName || '').trim().toLowerCase();
-  
+
   const appAliases = {
     vscode: 'code',
     'vs code': 'code',
@@ -226,6 +250,7 @@ ipcMain.handle('os:launch-app', async (_event, { appName }) => {
     cmd: 'cmd.exe',
     terminal: 'wt.exe',
     explorer: 'explorer.exe',
+    spotify: 'spotify.exe',
     settings: 'ms-settings:',
   };
 
@@ -254,18 +279,34 @@ ipcMain.handle('os:launch-app', async (_event, { appName }) => {
   });
 });
 
+// Type text into active background window
+ipcMain.handle('os:type-text', async (_event, { text }) => {
+  if (!text) return { success: false };
+
+  clipboard.writeText(text);
+
+  if (process.platform === 'win32' && mainWindow) {
+    // Unfocus orb and simulate paste in target window
+    mainWindow.blur();
+    setTimeout(() => {
+      exec(`powershell -NoProfile -Command "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SendKeys]::SendWait('^v')"`);
+    }, 150);
+  }
+
+  return { success: true };
+});
+
 // Focus Guardian Poller
 ipcMain.handle('focus:start', (_event, { durationMins, task }) => {
   if (focusInterval) clearInterval(focusInterval);
 
   const blacklistedKeywords = ['youtube', 'netflix', 'reddit', 'twitter', 'x.com', 'instagram', 'twitch', 'tiktok'];
 
-  // Check foreground window title on Windows using PowerShell every 3s
   focusInterval = setInterval(() => {
     if (process.platform === 'win32' && mainWindow) {
       const psCommand = `(Get-Process | Where-Object { $_.MainWindowHandle -eq (Add-Type -MemberDefinition '[DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();' -Name 'Win32' -Namespace 'Native' -PassThru)::GetForegroundWindow() }).MainWindowTitle`;
-      
-      exec(`powershell -NoProfile -Command "${psCommand}"`, (err, stdout) => {
+
+      exec(`powershell -NoProfile -Command "${psCommand}"`, { timeout: 1500 }, (err, stdout) => {
         if (!err && stdout) {
           const title = stdout.trim().toLowerCase();
           for (const keyword of blacklistedKeywords) {

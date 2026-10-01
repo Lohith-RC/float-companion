@@ -1,0 +1,32 @@
+{
+  "appId": "com.floatcompanion.desktop",
+  "productName": "FloatCompanion",
+  "directories": {
+    "output": "dist-package"
+  },
+  "files": [
+    "dist/**/*",
+    "electron/**/*",
+    "package.json"
+  ],
+  "win": {
+    "target": [
+      {
+        "target": "nsis",
+        "arch": ["x64"]
+      }
+    ],
+    "requestedExecutionLevel": "asInvoker"
+  },
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    "shortcutName": "FloatCompanion AI"
+  },
+  "mac": {
+    "target": "dmg",
+    "category": "public.app-category.productivity"
+  }
+}

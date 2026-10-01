@@ -11,22 +11,37 @@ import {
   Play,
   Square,
   AlertCircle,
-  ExternalLink,
+  Settings,
+  Edit3,
+  Copy,
+  Check,
+  RotateCw,
+  Terminal,
 } from 'lucide-react';
-import { useAppStore } from '../store/useAppStore';
+import { useAppStore, ChatMessage } from '../store/useAppStore';
 import { matchLocalIntent } from '../ai/fastRouter';
+import { orchestrator } from '../ai/orchestrator';
+import { sounds } from '../services/soundEffects';
+import {
+  UserSettings,
+  loadSettings,
+  saveMessages,
+  saveTasks,
+  recordFocusSession,
+} from '../db/indexedDB';
+import { SettingsView } from './SettingsView';
 
 interface ExpandedTrayProps {
   onCollapse: () => void;
+  onOpenCanvas: () => void;
 }
 
-export const ExpandedTray: React.FC<ExpandedTrayProps> = ({ onCollapse }) => {
+export const ExpandedTray: React.FC<ExpandedTrayProps> = ({ onCollapse, onOpenCanvas }) => {
   const {
     activeTab,
     setActiveTab,
     messages,
     addMessage,
-    clearMessages,
     tasks,
     toggleTask,
     addTask,
@@ -40,13 +55,42 @@ export const ExpandedTray: React.FC<ExpandedTrayProps> = ({ onCollapse }) => {
   const [inputPrompt, setInputPrompt] = useState('');
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [systemStats, setSystemStats] = useState<any>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [streamingContent, setStreamingContent] = useState('');
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [userSettings, setUserSettings] = useState<UserSettings | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  // Focus timer state
+  const [secondsRemaining, setSecondsRemaining] = useState(25 * 60);
   const chatBottomRef = useRef<HTMLDivElement>(null);
+
+  // Load user settings on mount
+  useEffect(() => {
+    loadSettings().then((s) => {
+      setUserSettings(s);
+      sounds.setEnabled(s.soundEnabled);
+    });
+  }, []);
+
+  // Save messages to IndexedDB when they change
+  useEffect(() => {
+    if (messages.length > 0) {
+      saveMessages(messages);
+    }
+  }, [messages]);
+
+  // Save tasks to IndexedDB when they change
+  useEffect(() => {
+    if (tasks.length > 0) {
+      saveTasks(tasks);
+    }
+  }, [tasks]);
 
   // Auto-scroll chat
   useEffect(() => {
     chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, streamingContent]);
 
   // Load hardware stats if stats tab is active
   useEffect(() => {
@@ -55,18 +99,44 @@ export const ExpandedTray: React.FC<ExpandedTrayProps> = ({ onCollapse }) => {
     }
   }, [activeTab]);
 
+  // Pomodoro countdown ticker
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (isFocusing && secondsRemaining > 0) {
+      timer = setInterval(() => {
+        setSecondsRemaining((prev) => {
+          if (prev <= 1) {
+            // Sprint completed!
+            sounds.playSuccess();
+            setFocusing(false);
+            recordFocusSession({
+              id: Date.now().toString(),
+              taskTitle: activeFocusTask || 'Focus Sprint',
+              durationMins: 25,
+              completedAt: Date.now(),
+              distractionsCaught: 0,
+            });
+            return 25 * 60;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [isFocusing, secondsRemaining, activeFocusTask]);
+
   // Handle Prompt Submission
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     const prompt = inputPrompt.trim();
-    if (!prompt || isSubmitting) return;
+    if (!prompt || isStreaming) return;
 
+    sounds.playClick();
     setInputPrompt('');
     addMessage({ role: 'user', content: prompt });
-    setIsSubmitting(true);
 
     try {
-      // 1. Try Zero-Token FastRouter
+      // 1. Try Zero-Token FastRouter first (<10ms)
       const routerResult = await matchLocalIntent(prompt);
 
       if (routerResult.handled && routerResult.reply) {
@@ -75,25 +145,67 @@ export const ExpandedTray: React.FC<ExpandedTrayProps> = ({ onCollapse }) => {
           content: routerResult.reply,
           isZeroToken: true,
         });
-      } else {
-        // Fallback simulated AI answer or Groq
-        addMessage({
-          role: 'assistant',
-          content: `🤖 **AI Orchestrator (${prompt}):**\n\nI processed your request using the multi-model pipeline. In upcoming Phase 4, your configured Groq \`llama-3.3-70b\` key will stream this answer live. For zero-token native control, try typing \`"time"\`, \`"ram"\`, or \`"open notepad"\`!`,
-        });
+        return;
       }
+
+      // 2. Fall through to Multi-Model Orchestrator (Groq / Gemini / Ollama)
+      if (!userSettings) return;
+
+      setIsStreaming(true);
+      setStreamingContent('');
+
+      await orchestrator.streamPrompt(
+        prompt,
+        messages,
+        userSettings,
+        {
+          onChunk: (chunkText) => {
+            setStreamingContent(chunkText);
+          },
+          onDone: (fullText) => {
+            setIsStreaming(false);
+            setStreamingContent('');
+            addMessage({
+              role: 'assistant',
+              content: fullText,
+            });
+          },
+          onError: (errMsg) => {
+            setIsStreaming(false);
+            setStreamingContent('');
+            addMessage({
+              role: 'assistant',
+              content: `⚠️ ${errMsg}`,
+            });
+          },
+        }
+      );
     } catch (err: any) {
+      setIsStreaming(false);
       addMessage({
         role: 'assistant',
-        content: `⚠️ Error executing command: ${err.message}`,
+        content: `⚠️ Failed to process command: ${err.message}`,
       });
-    } finally {
-      setIsSubmitting(false);
+    }
+  };
+
+  const handleCopyText = (text: string, id: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 1800);
+  };
+
+  const handleTypeTextToBackground = async (text: string) => {
+    if (window.electronAPI?.os?.typeText) {
+      await window.electronAPI.os.typeText(text);
+      sounds.playChime();
     }
   };
 
   const startFocusSprint = (taskTitle: string) => {
+    setSecondsRemaining(25 * 60);
     setFocusing(true, taskTitle, 25);
+    sounds.playChime();
     if (window.electronAPI?.focus?.start) {
       window.electronAPI.focus.start(25, taskTitle);
     }
@@ -101,13 +213,29 @@ export const ExpandedTray: React.FC<ExpandedTrayProps> = ({ onCollapse }) => {
 
   const stopFocusSprint = () => {
     setFocusing(false);
+    setSecondsRemaining(25 * 60);
     if (window.electronAPI?.focus?.stop) {
       window.electronAPI.focus.stop();
     }
   };
 
+  const formatTimer = (totalSeconds: number) => {
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
   return (
-    <div className="w-full h-full flex flex-col glass-panel rounded-2xl overflow-hidden shadow-2xl border border-white/10 select-none">
+    <div className="relative w-full h-full flex flex-col glass-panel rounded-2xl overflow-hidden shadow-2xl border border-white/10 select-none">
+      {/* Settings Modal */}
+      {settingsOpen && userSettings && (
+        <SettingsView
+          settings={userSettings}
+          onUpdate={(s) => setUserSettings(s)}
+          onClose={() => setSettingsOpen(false)}
+        />
+      )}
+
       {/* Top Header */}
       <div className="h-12 px-4 flex items-center justify-between border-b border-white/10 bg-slate-900/60 drag-region">
         <div className="flex items-center gap-2">
@@ -116,12 +244,26 @@ export const ExpandedTray: React.FC<ExpandedTrayProps> = ({ onCollapse }) => {
           </div>
           <span className="text-xs font-semibold tracking-wide text-slate-200">FloatCompanion</span>
           <span className="text-[10px] px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-300 border border-sky-500/20 font-mono">
-            v1.0.0
+            {userSettings?.groqKey ? 'Groq Llama-3.3' : userSettings?.geminiKey ? 'Gemini 2.5' : 'Zero-Token'}
           </span>
         </div>
 
-        {/* Window controls */}
+        {/* Window controls & utility buttons */}
         <div className="flex items-center gap-1.5 no-drag">
+          <button
+            onClick={onOpenCanvas}
+            className="p-1.5 text-slate-400 hover:text-sky-300 hover:bg-white/10 rounded transition-colors"
+            title="Screen Canvas Overlay (Ctrl+Shift+C)"
+          >
+            <Edit3 className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={() => setSettingsOpen(true)}
+            className="p-1.5 text-slate-400 hover:text-slate-200 hover:bg-white/10 rounded transition-colors"
+            title="Settings & API Keys"
+          >
+            <Settings className="w-3.5 h-3.5" />
+          </button>
           <button
             onClick={onCollapse}
             className="p-1.5 text-slate-400 hover:text-slate-200 hover:bg-white/10 rounded transition-colors"
@@ -219,21 +361,58 @@ export const ExpandedTray: React.FC<ExpandedTrayProps> = ({ onCollapse }) => {
                 className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
               >
                 <div
-                  className={`max-w-[90%] px-3.5 py-2.5 rounded-2xl leading-relaxed text-xs ${
+                  className={`max-w-[92%] px-3.5 py-2.5 rounded-2xl leading-relaxed text-xs relative group ${
                     msg.role === 'user'
                       ? 'bg-sky-600/90 text-white rounded-tr-sm shadow-md'
                       : 'bg-slate-800/90 text-slate-200 rounded-tl-sm border border-white/10'
                   }`}
                 >
                   <div className="whitespace-pre-wrap">{msg.content}</div>
+
                   {msg.isZeroToken && (
                     <div className="mt-1 text-[10px] text-sky-300/80 font-mono flex items-center gap-1">
-                      <span>⚡ 0-Token Local Intent</span>
+                      <span>⚡ 0-Token Deterministic Intent</span>
+                    </div>
+                  )}
+
+                  {/* Actions for assistant messages */}
+                  {msg.role === 'assistant' && (
+                    <div className="mt-2 pt-1 border-t border-white/10 flex items-center gap-2 text-[10px] opacity-80 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={() => handleCopyText(msg.content, msg.id)}
+                        className="flex items-center gap-1 hover:text-sky-300"
+                        title="Copy to clipboard"
+                      >
+                        {copiedId === msg.id ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                        <span>{copiedId === msg.id ? 'Copied' : 'Copy'}</span>
+                      </button>
+                      <button
+                        onClick={() => handleTypeTextToBackground(msg.content)}
+                        className="flex items-center gap-1 hover:text-amber-300 ml-2"
+                        title="Type directly into the window behind the Orb"
+                      >
+                        <Terminal className="w-3 h-3" />
+                        <span>Type in Active Window</span>
+                      </button>
                     </div>
                   )}
                 </div>
               </div>
             ))}
+
+            {/* Live Streaming Message Bubble */}
+            {isStreaming && (
+              <div className="flex flex-col items-start">
+                <div className="max-w-[92%] px-3.5 py-2.5 rounded-2xl bg-slate-800/90 text-slate-200 rounded-tl-sm border border-sky-500/40 text-xs shadow-lg">
+                  <div className="whitespace-pre-wrap">{streamingContent || 'Thinking...'}</div>
+                  <div className="mt-1 text-[10px] text-sky-400 font-mono flex items-center gap-1 animate-pulse">
+                    <RotateCw className="w-3 h-3 animate-spin" />
+                    <span>Streaming live tokens...</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div ref={chatBottomRef} />
           </div>
         )}
@@ -300,10 +479,16 @@ export const ExpandedTray: React.FC<ExpandedTrayProps> = ({ onCollapse }) => {
         {/* 3. Focus Guardian Tab */}
         {activeTab === 'focus' && (
           <div className="h-full flex flex-col items-center justify-center p-4 text-center space-y-4">
-            <div className="relative w-36 h-36 flex items-center justify-center rounded-full border-4 border-amber-500/30 bg-amber-500/5">
+            <div
+              className={`relative w-36 h-36 flex items-center justify-center rounded-full border-4 ${
+                isFocusing
+                  ? 'border-amber-400 bg-amber-500/10 shadow-[0_0_30px_rgba(245,158,11,0.3)] animate-pulse'
+                  : 'border-amber-500/30 bg-amber-500/5'
+              }`}
+            >
               <div className="text-center">
                 <span className="text-3xl font-bold font-mono text-amber-300">
-                  {isFocusing ? '25:00' : '25m'}
+                  {formatTimer(secondsRemaining)}
                 </span>
                 <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-wider">
                   {isFocusing ? 'Sprint Active' : 'Pomodoro Shield'}
@@ -314,11 +499,11 @@ export const ExpandedTray: React.FC<ExpandedTrayProps> = ({ onCollapse }) => {
             {isFocusing ? (
               <div className="space-y-3 w-full max-w-xs">
                 <p className="text-xs text-amber-200">
-                  Monitoring: <strong>{activeFocusTask || 'Deep Work Session'}</strong>
+                  Guarding: <strong>{activeFocusTask || 'Deep Work Session'}</strong>
                 </p>
                 <button
                   onClick={stopFocusSprint}
-                  className="w-full py-2 bg-red-600/80 hover:bg-red-500 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2"
+                  className="w-full py-2 bg-red-600/80 hover:bg-red-500 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2 shadow-lg shadow-red-950/40"
                 >
                   <Square className="w-3.5 h-3.5 fill-current" />
                   <span>End Sprint</span>
@@ -381,6 +566,16 @@ export const ExpandedTray: React.FC<ExpandedTrayProps> = ({ onCollapse }) => {
                     <span className="font-mono text-slate-200 font-semibold uppercase">{systemStats.platform}</span>
                   </div>
                 </div>
+
+                {systemStats.storage && (
+                  <div className="p-2.5 bg-slate-900/60 rounded-xl border border-white/5">
+                    <span className="text-slate-500 block text-[10px] mb-1">Primary Storage (C:)</span>
+                    <div className="flex justify-between text-xs text-slate-300 font-mono">
+                      <span>Free: {systemStats.storage[0]?.freeGB} GB</span>
+                      <span>Total: {systemStats.storage[0]?.totalGB} GB</span>
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="text-center py-8 text-xs text-slate-500">
@@ -398,12 +593,16 @@ export const ExpandedTray: React.FC<ExpandedTrayProps> = ({ onCollapse }) => {
             type="text"
             value={inputPrompt}
             onChange={(e) => setInputPrompt(e.target.value)}
-            placeholder="Ask or command (e.g. 'ram', 'open vscode', 'time')..."
+            placeholder={
+              userSettings?.groqKey || userSettings?.geminiKey
+                ? "Ask anything, or 'time', 'ram', 'open notepad'..."
+                : "Try 'time', 'ram', 'open vscode', or add API key in ⚙️..."
+            }
             className="flex-1 bg-slate-900/90 border border-white/10 rounded-xl px-3 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-sky-500 transition-colors"
           />
           <button
             type="submit"
-            disabled={!inputPrompt.trim() || isSubmitting}
+            disabled={!inputPrompt.trim() || isStreaming}
             className="p-2 bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white rounded-xl transition-colors"
           >
             <Send className="w-3.5 h-3.5" />
