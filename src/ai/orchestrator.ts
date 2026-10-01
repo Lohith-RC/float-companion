@@ -37,11 +37,13 @@ export class AIOrchestrator {
     this.abortController = new AbortController();
     const signal = this.abortController.signal;
 
+    const messages = prepareOptimizedContext([...history, { id: 'temp', role: 'user', content: prompt, timestamp: Date.now() }]);
+
     // Multimodal Vision Route: If image attached, route to Gemini 2.5 Flash
     if (imageAttachment) {
       if (settings.geminiKey?.trim()) {
         try {
-          await this.streamGemini(prompt, settings.geminiKey.trim(), signal, callbacks, imageAttachment);
+          await this.streamGemini(messages, settings.geminiKey.trim(), signal, callbacks, imageAttachment);
           return;
         } catch (err: unknown) {
           if (err instanceof Error && err.name === 'AbortError') return;
@@ -53,8 +55,6 @@ export class AIOrchestrator {
         return;
       }
     }
-
-    const messages = prepareOptimizedContext([...history, { id: 'temp', role: 'user', content: prompt, timestamp: Date.now() }]);
 
     // Priority 1: Groq (Ultra-fast <300ms)
     if (settings.groqKey?.trim()) {
@@ -68,7 +68,7 @@ export class AIOrchestrator {
         // Fallback to Gemini if key available
         if (settings.geminiKey?.trim()) {
           try {
-            await this.streamGemini(prompt, settings.geminiKey.trim(), signal, callbacks);
+            await this.streamGemini(messages, settings.geminiKey.trim(), signal, callbacks);
             return;
           } catch (geminiErr: unknown) {
             console.error('Gemini fallback failed:', getErrorMessage(geminiErr));
@@ -82,7 +82,7 @@ export class AIOrchestrator {
     // Priority 2: Gemini Direct
     if (settings.geminiKey?.trim()) {
       try {
-        await this.streamGemini(prompt, settings.geminiKey.trim(), signal, callbacks);
+        await this.streamGemini(messages, settings.geminiKey.trim(), signal, callbacks);
         return;
       } catch (err: unknown) {
         if (err instanceof Error && err.name === 'AbortError') return;
@@ -173,33 +173,41 @@ export class AIOrchestrator {
   }
 
   /**
-   * Google Gemini SSE Streaming
+   * Google Gemini SSE Streaming with Full Conversation History & Secure Headers
    */
   private async streamGemini(
-    prompt: string,
+    messages: PromptMessage[],
     apiKey: string,
     signal: AbortSignal,
     callbacks: StreamCallbacks,
     imageAttachment?: ImageAttachment
   ): Promise<void> {
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key=${apiKey}`;
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse`;
 
-    const parts: Array<Record<string, unknown>> = [{ text: prompt }];
-    if (imageAttachment) {
-      parts.unshift({
-        inlineData: {
-          mimeType: imageAttachment.mimeType || 'image/jpeg',
-          data: imageAttachment.base64Data,
-        },
-      });
-    }
+    const contents = messages.map((m, index) => {
+      const isLast = index === messages.length - 1;
+      const parts: Array<Record<string, unknown>> = [{ text: m.content }];
+      if (isLast && imageAttachment) {
+        parts.unshift({
+          inlineData: {
+            mimeType: imageAttachment.mimeType || 'image/jpeg',
+            data: imageAttachment.base64Data,
+          },
+        });
+      }
+      return {
+        role: m.role === 'assistant' ? 'model' : 'user',
+        parts,
+      };
+    });
 
     const response = await fetch(endpoint, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ role: 'user', parts }],
-      }),
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': apiKey,
+      },
+      body: JSON.stringify({ contents }),
       signal,
     });
 

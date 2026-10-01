@@ -10,7 +10,6 @@ import {
   loadSettings,
   saveMessages,
   saveTasks,
-  recordFocusSession,
 } from '../db/indexedDB';
 import { SystemStatsResponse } from '../types/electron';
 import { getErrorMessage } from '../utils/errorUtils';
@@ -44,12 +43,17 @@ export const ExpandedTray: FC<ExpandedTrayProps> = ({ onCollapse, onOpenCanvas }
     setActiveTab,
     messages,
     addMessage,
+    clearMessages,
     tasks,
     toggleTask,
     addTask,
     removeTask,
     isFocusing,
-    setFocusing,
+    startFocus,
+    stopFocus,
+    selectedSprintDuration,
+    focusSecondsRemaining,
+    setSelectedDuration,
     activeFocusTask,
     distractionAlert,
     setDistractionAlert,
@@ -64,9 +68,6 @@ export const ExpandedTray: FC<ExpandedTrayProps> = ({ onCollapse, onOpenCanvas }
   const [userSettings, setUserSettings] = useState<UserSettings | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  // Chronograph state
-  const [selectedDuration, setSelectedDuration] = useState(25);
-  const [secondsRemaining, setSecondsRemaining] = useState(25 * 60);
   const chatBottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -96,30 +97,7 @@ export const ExpandedTray: FC<ExpandedTrayProps> = ({ onCollapse, onOpenCanvas }
     }
   }, [activeTab]);
 
-  // Pomodoro countdown ticker
-  useEffect(() => {
-    let timer: NodeJS.Timeout;
-    if (isFocusing && secondsRemaining > 0) {
-      timer = setInterval(() => {
-        setSecondsRemaining((prev) => {
-          if (prev <= 1) {
-            sounds.playSuccess();
-            setFocusing(false);
-            recordFocusSession({
-              id: Date.now().toString(),
-              taskTitle: activeFocusTask || 'Focus Sprint',
-              durationMins: selectedDuration,
-              completedAt: Date.now(),
-              distractionsCaught: 0,
-            });
-            return selectedDuration * 60;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    }
-    return () => clearInterval(timer);
-  }, [isFocusing, secondsRemaining, activeFocusTask, selectedDuration, setFocusing]);
+
 
   const handleCaptureScreen = async () => {
     if (window.electronAPI?.os?.captureScreen) {
@@ -155,13 +133,19 @@ export const ExpandedTray: FC<ExpandedTrayProps> = ({ onCollapse, onOpenCanvas }
       if (!currentAttachment) {
         const routerResult = await matchLocalIntent(effectivePrompt);
 
-        if (routerResult.handled && routerResult.reply) {
-          addMessage({
-            role: 'assistant',
-            content: routerResult.reply,
-            isZeroToken: true,
-          });
-          return;
+        if (routerResult.handled) {
+          if (routerResult.action === 'clear_chat') {
+            clearMessages();
+            return;
+          }
+          if (routerResult.reply) {
+            addMessage({
+              role: 'assistant',
+              content: routerResult.reply,
+              isZeroToken: true,
+            });
+            return;
+          }
         }
       }
 
@@ -224,15 +208,14 @@ export const ExpandedTray: FC<ExpandedTrayProps> = ({ onCollapse, onOpenCanvas }
 
   const startFocusSprint = (durationMins: number) => {
     sounds.playChime();
-    setSelectedDuration(durationMins);
-    setSecondsRemaining(durationMins * 60);
-    setFocusing(true, `Sprint (${durationMins}m)`);
+    startFocus(durationMins, `Sprint (${durationMins}m)`);
+    window.electronAPI?.focus?.start?.(durationMins, `Sprint (${durationMins}m)`);
   };
 
   const stopFocusSprint = () => {
     sounds.playAlert();
-    setFocusing(false);
-    setSecondsRemaining(selectedDuration * 60);
+    stopFocus();
+    window.electronAPI?.focus?.stop?.();
   };
 
   return (
@@ -312,12 +295,11 @@ export const ExpandedTray: FC<ExpandedTrayProps> = ({ onCollapse, onOpenCanvas }
           {activeTab === 'focus' && (
             <FocusTab
               isFocusing={isFocusing}
-              selectedDuration={selectedDuration}
-              secondsRemaining={secondsRemaining}
+              selectedDuration={selectedSprintDuration}
+              secondsRemaining={focusSecondsRemaining}
               activeFocusTask={activeFocusTask}
               onSelectDuration={(dur) => {
                 setSelectedDuration(dur);
-                setSecondsRemaining(dur * 60);
                 sounds.playClick();
               }}
               onStartSprint={startFocusSprint}

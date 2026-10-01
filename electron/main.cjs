@@ -67,9 +67,9 @@ function createMainWindow() {
   // Enterprise Security: Intercept external navigation inside the Electron shell
   mainWindow.webContents.on('will-navigate', (event, navigationUrl) => {
     try {
-      const parsed = new URL(navigationUrl);
-      const origin = new URL(startUrl).origin;
-      if (parsed.origin !== origin) {
+      const cleanNav = navigationUrl.split('#')[0].split('?')[0];
+      const cleanStart = startUrl.split('#')[0].split('?')[0];
+      if (cleanNav !== cleanStart) {
         event.preventDefault();
         shell.openExternal(navigationUrl);
       }
@@ -150,9 +150,16 @@ app.whenReady().then(() => {
   createMainWindow();
   registerSystemHandlers(() => mainWindow);
 
-  // Deny all unnecessary ambient permissions (camera, microphone, geolocation)
-  session.defaultSession.setPermissionRequestHandler((_webContents, _permission, callback) => {
-    callback(false);
+  // Explicit permission allowlist: allow audioCapture/media for Web Speech voice dictation, block ambient tracking
+  session.defaultSession.setPermissionRequestHandler((_webContents, permission, callback) => {
+    if (permission === 'media' || permission === 'audioCapture') {
+      callback(true);
+    } else {
+      callback(false);
+    }
+  });
+  session.defaultSession.setPermissionCheckHandler((_webContents, permission) => {
+    return permission === 'media' || permission === 'audioCapture';
   });
 
   // Global Summon Hotkey: Ctrl+Shift+Space

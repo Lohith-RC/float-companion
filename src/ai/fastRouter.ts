@@ -3,7 +3,7 @@ import { getErrorMessage } from '../utils/errorUtils';
 export interface RouterResult {
   handled: boolean;
   reply?: string;
-  action?: 'launched_app' | 'showed_stats' | 'local_time' | 'task_summary';
+  action?: 'launched_app' | 'showed_stats' | 'local_time' | 'task_summary' | 'clear_chat';
 }
 
 export async function matchLocalIntent(prompt: string): Promise<RouterResult> {
@@ -74,7 +74,16 @@ export async function matchLocalIntent(prompt: string): Promise<RouterResult> {
     }
   }
 
-  // 4. Quick Help
+  // 4. Clear Chat History
+  if (p === 'clear' || p === '/clear' || p === 'cls') {
+    return {
+      handled: true,
+      action: 'clear_chat',
+      reply: '🧹 Chat history cleared.',
+    };
+  }
+
+  // 5. Quick Help
   if (p === 'help' || p === '/help') {
     return {
       handled: true,

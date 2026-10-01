@@ -24,6 +24,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.on('focus:distraction-detected', listener);
       return () => ipcRenderer.removeListener('focus:distraction-detected', listener);
     },
+    onDistractionCleared: (callback) => {
+      const listener = () => callback();
+      ipcRenderer.on('focus:distraction-cleared', listener);
+      return () => ipcRenderer.removeListener('focus:distraction-cleared', listener);
+    },
     // Backward compatibility aliases
     start: (durationMinutes, taskTitle) =>
       ipcRenderer.invoke('focus:start-session', { durationMinutes, taskTitle }),

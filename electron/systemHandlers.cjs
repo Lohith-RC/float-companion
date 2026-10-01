@@ -5,6 +5,9 @@ const { validateCommand } = require('./securityKernel.cjs');
 const { validateFocusSessionPayload } = require('./ipcValidator.cjs');
 
 let focusInterval = null;
+let cachedStorageInfo = null;
+let lastStorageQueryTime = 0;
+let isCurrentlyDistracted = false;
 
 /**
  * Registers OS and Focus Guardian IPC handlers.
@@ -22,9 +25,9 @@ function registerSystemHandlers(getMainWindow) {
     const usedGB = parseFloat((usedMemBytes / (1024 ** 3)).toFixed(2));
     const usagePercent = Math.round((usedMemBytes / totalMemBytes) * 100);
 
-    let storageInfo = [{ drive: 'C:', totalGB: 512, freeGB: 180, usedGB: 332 }];
+    let storageInfo = cachedStorageInfo || [{ drive: 'C:', totalGB: 512, freeGB: 180, usedGB: 332 }];
 
-    if (process.platform === 'win32') {
+    if (process.platform === 'win32' && (!cachedStorageInfo || Date.now() - lastStorageQueryTime > 25000)) {
       try {
         const psDisk = `Get-CimInstance Win32_LogicalDisk -Filter "DriveType=3" | Select-Object DeviceID, Size, FreeSpace | ConvertTo-Json`;
         const stdout = await new Promise((res) => {
@@ -43,6 +46,8 @@ function registerSystemHandlers(getMainWindow) {
               usedGB: sizeGB - freeSpaceGB,
             };
           });
+          cachedStorageInfo = storageInfo;
+          lastStorageQueryTime = Date.now();
         }
       } catch {
         // Safe fallback
@@ -197,31 +202,48 @@ function registerSystemHandlers(getMainWindow) {
       'facebook',
     ];
 
+    isCurrentlyDistracted = false;
     const sessionStartTimestamp = Date.now();
 
     focusInterval = setInterval(() => {
       const win = getMainWindow();
       if (process.platform === 'win32' && win) {
-        const psCommand = `(Get-Process | Where-Object { $_.MainWindowHandle -eq (Add-Type -MemberDefinition '[DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();' -Name 'Win32' -Namespace 'Native' -PassThru)::GetForegroundWindow() }) | Select-Object -Property MainWindowTitle, ProcessName | ConvertTo-Json`;
+        // Lightweight standard query without in-memory C# compilation
+        const psCommand = `Get-Process | Where-Object { $_.MainWindowTitle } | Select-Object -Property MainWindowTitle, ProcessName | ConvertTo-Json -Compress`;
 
         exec(`powershell -NoProfile -Command "${psCommand}"`, { timeout: 1500 }, (err, stdout) => {
           if (!err && stdout) {
             try {
               const parsed = JSON.parse(stdout);
-              const title = (parsed?.MainWindowTitle || '').trim();
-              const proc = (parsed?.ProcessName || '').trim();
-              const lowerTitle = title.toLowerCase();
+              const windows = Array.isArray(parsed) ? parsed : [parsed];
+              let foundDistraction = false;
 
-              for (const keyword of blacklistedKeywords) {
-                if (lowerTitle.includes(keyword.toLowerCase())) {
-                  win.webContents.send('focus:distraction-detected', {
-                    windowTitle: title,
-                    processName: proc,
-                    matchedRule: keyword,
-                    timestamp: Date.now(),
-                  });
-                  break;
+              for (const w of windows) {
+                const title = (w?.MainWindowTitle || '').trim();
+                const proc = (w?.ProcessName || '').trim();
+                const lowerTitle = title.toLowerCase();
+
+                for (const keyword of blacklistedKeywords) {
+                  if (lowerTitle.includes(keyword.toLowerCase())) {
+                    foundDistraction = true;
+                    if (!isCurrentlyDistracted) {
+                      isCurrentlyDistracted = true;
+                      win.webContents.send('focus:distraction-detected', {
+                        windowTitle: title,
+                        processName: proc,
+                        matchedRule: keyword,
+                        timestamp: Date.now(),
+                      });
+                    }
+                    break;
+                  }
                 }
+                if (foundDistraction) break;
+              }
+
+              if (!foundDistraction && isCurrentlyDistracted) {
+                isCurrentlyDistracted = false;
+                win.webContents.send('focus:distraction-cleared');
               }
             } catch {
               // Ignore non-json stdout
@@ -242,6 +264,7 @@ function registerSystemHandlers(getMainWindow) {
       clearInterval(focusInterval);
       focusInterval = null;
     }
+    isCurrentlyDistracted = false;
     return { success: true };
   });
 }
@@ -251,6 +274,7 @@ function stopFocusMonitoring() {
     clearInterval(focusInterval);
     focusInterval = null;
   }
+  isCurrentlyDistracted = false;
 }
 
 module.exports = {

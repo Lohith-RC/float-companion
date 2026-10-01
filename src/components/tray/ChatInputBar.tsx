@@ -68,9 +68,16 @@ export const ChatInputBar: FC<ChatInputBarProps> = ({
         recog.lang = 'en-US';
 
         recog.onresult = (event: SpeechRecognitionEvent) => {
-          const transcript = event.results[0]?.[0]?.transcript || '';
-          if (transcript) {
-            onChangePrompt(transcript);
+          let full = '';
+          const results = event.results as unknown as ArrayLike<{ [idx: number]: { transcript: string } }>;
+          const len = results.length || 0;
+          for (let i = 0; i < len; i++) {
+            const chunk = results[i]?.[0]?.transcript;
+            if (chunk) full += chunk + ' ';
+          }
+          const clean = full.trim();
+          if (clean) {
+            onChangePrompt(clean);
           }
         };
 

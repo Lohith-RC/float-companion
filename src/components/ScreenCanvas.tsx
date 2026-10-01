@@ -19,14 +19,27 @@ export const ScreenCanvas: FC<ScreenCanvasProps> = ({ onClose }) => {
     canvas.height = window.innerHeight;
 
     const handleResize = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
+      const ctx = canvas.getContext('2d');
+      if (!ctx || canvas.width === 0 || canvas.height === 0) {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        return;
+      }
+      try {
+        const prevData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        ctx.putImageData(prevData, 0, 0);
+      } catch {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+      }
     };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const startDrawing = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -37,7 +50,7 @@ export const ScreenCanvas: FC<ScreenCanvasProps> = ({ onClose }) => {
     ctx.moveTo(e.clientX, e.clientY);
   };
 
-  const draw = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const draw = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (!isDrawing) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -81,11 +94,11 @@ export const ScreenCanvas: FC<ScreenCanvasProps> = ({ onClose }) => {
     <div className="fixed inset-0 z-[100] cursor-crosshair select-none bg-black/15 backdrop-blur-[0.5px]">
       <canvas
         ref={canvasRef}
-        onMouseDown={startDrawing}
-        onMouseMove={draw}
-        onMouseUp={stopDrawing}
-        onMouseLeave={stopDrawing}
-        className="w-full h-full block"
+        onPointerDown={startDrawing}
+        onPointerMove={draw}
+        onPointerUp={stopDrawing}
+        onPointerLeave={stopDrawing}
+        className="w-full h-full block touch-none"
       />
 
       {/* Floating Canvas Toolbar */}

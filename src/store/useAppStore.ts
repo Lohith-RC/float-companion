@@ -21,7 +21,8 @@ interface AppState {
   messages: ChatMessage[];
   tasks: TaskItem[];
   isFocusing: boolean;
-  focusMinutesRemaining: number;
+  selectedSprintDuration: number;
+  focusSecondsRemaining: number;
   activeFocusTask: string;
   distractionAlert: { active: boolean; title: string; keyword: string } | null;
 
@@ -32,11 +33,14 @@ interface AppState {
   addTask: (title: string, durationMins?: number) => void;
   toggleTask: (id: string) => void;
   removeTask: (id: string) => void;
-  setFocusing: (isFocusing: boolean, task?: string, duration?: number) => void;
+  setSelectedDuration: (duration: number) => void;
+  startFocus: (durationMins?: number, task?: string) => void;
+  stopFocus: () => void;
+  tickFocusSeconds: () => boolean;
   setDistractionAlert: (alert: { active: boolean; title: string; keyword: string } | null) => void;
 }
 
-export const useAppStore = create<AppState>((set) => ({
+export const useAppStore = create<AppState>((set, get) => ({
   mode: 'orb',
   activeTab: 'chat',
   messages: [
@@ -54,7 +58,8 @@ export const useAppStore = create<AppState>((set) => ({
     { id: '3', title: 'Test Global Summon Hotkey', completed: false, durationMins: 15 },
   ],
   isFocusing: false,
-  focusMinutesRemaining: 25,
+  selectedSprintDuration: 25,
+  focusSecondsRemaining: 25 * 60,
   activeFocusTask: '',
   distractionAlert: null,
 
@@ -66,7 +71,7 @@ export const useAppStore = create<AppState>((set) => ({
         ...state.messages,
         {
           ...msg,
-          id: Math.random().toString(36).substring(2, 9),
+          id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 9),
           timestamp: Date.now(),
         },
       ],
@@ -77,7 +82,7 @@ export const useAppStore = create<AppState>((set) => ({
       tasks: [
         ...state.tasks,
         {
-          id: Date.now().toString(),
+          id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
           title,
           completed: false,
           durationMins,
@@ -92,12 +97,40 @@ export const useAppStore = create<AppState>((set) => ({
     set((state) => ({
       tasks: state.tasks.filter((t) => t.id !== id),
     })),
-  setFocusing: (isFocusing, task = '', duration = 25) =>
+  setSelectedDuration: (duration) =>
     set({
-      isFocusing,
-      activeFocusTask: task,
-      focusMinutesRemaining: duration,
-      distractionAlert: null,
+      selectedSprintDuration: duration,
+      focusSecondsRemaining: duration * 60,
     }),
+  startFocus: (durationMins, task) => {
+    const dur = durationMins ?? get().selectedSprintDuration;
+    const taskTitle = task ?? (get().activeFocusTask || `Sprint (${dur}m)`);
+    set({
+      isFocusing: true,
+      selectedSprintDuration: dur,
+      focusSecondsRemaining: dur * 60,
+      activeFocusTask: taskTitle,
+      distractionAlert: null,
+    });
+  },
+  stopFocus: () =>
+    set((state) => ({
+      isFocusing: false,
+      focusSecondsRemaining: state.selectedSprintDuration * 60,
+      distractionAlert: null,
+    })),
+  tickFocusSeconds: () => {
+    const state = get();
+    if (!state.isFocusing) return false;
+    if (state.focusSecondsRemaining <= 1) {
+      set({
+        isFocusing: false,
+        focusSecondsRemaining: state.selectedSprintDuration * 60,
+      });
+      return true; // Finished
+    }
+    set({ focusSecondsRemaining: state.focusSecondsRemaining - 1 });
+    return false;
+  },
   setDistractionAlert: (distractionAlert) => set({ distractionAlert }),
 }));

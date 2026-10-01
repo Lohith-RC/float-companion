@@ -11,6 +11,18 @@ class SoundEngine {
   private ctx: AudioContext | null = null;
   private enabled: boolean = true;
 
+  constructor() {
+    if (typeof window !== 'undefined') {
+      const unlockAudio = () => {
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume().catch(() => {});
+        }
+      };
+      window.addEventListener('click', unlockAudio, { once: true, passive: true });
+      window.addEventListener('keydown', unlockAudio, { once: true, passive: true });
+    }
+  }
+
   private getContext(): AudioContext | null {
     if (!this.enabled) return null;
     if (!this.ctx && typeof window !== 'undefined') {
@@ -20,7 +32,7 @@ class SoundEngine {
       }
     }
     if (this.ctx && this.ctx.state === 'suspended') {
-      this.ctx.resume();
+      this.ctx.resume().catch(() => {});
     }
     return this.ctx;
   }

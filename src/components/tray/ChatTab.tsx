@@ -13,6 +13,76 @@ interface ChatTabProps {
 }
 
 /**
+ * Formats basic Markdown structures (code chips, bold text, links, bullets) into accessible JSX elements
+ */
+function renderFormattedContent(rawText: string) {
+  const lines = rawText.split('\n');
+
+  return lines.map((line, lineIdx) => {
+    // Check if line is bullet list item
+    const isBullet = line.trim().startsWith('- ') || line.trim().startsWith('* ');
+    const displayLine = isBullet ? line.trim().substring(2) : line;
+
+    // Tokenize line for inline backticks, bold, and links
+    const tokens: Array<React.ReactNode> = [];
+    const regex = /(`[^`]+`|\*\*[^*]+\*\*|\[[^\]]+\]\([^)]+\))/g;
+    let lastIndex = 0;
+    let match: RegExpExecArray | null;
+
+    while ((match = regex.exec(displayLine)) !== null) {
+      if (match.index > lastIndex) {
+        tokens.push(displayLine.substring(lastIndex, match.index));
+      }
+
+      const matchStr = match[0];
+      if (matchStr.startsWith('`') && matchStr.endsWith('`')) {
+        tokens.push(
+          <code
+            key={`${lineIdx}-${match.index}`}
+            className="px-1.5 py-0.5 rounded bg-slate-950/70 text-sky-300 font-mono text-[11px] border border-white/10"
+          >
+            {matchStr.slice(1, -1)}
+          </code>
+        );
+      } else if (matchStr.startsWith('**') && matchStr.endsWith('**')) {
+        tokens.push(
+          <strong key={`${lineIdx}-${match.index}`} className="font-bold text-white">
+            {matchStr.slice(2, -2)}
+          </strong>
+        );
+      } else if (matchStr.startsWith('[') && matchStr.includes('](')) {
+        const linkMatch = matchStr.match(/\[([^\]]+)\]\(([^)]+)\)/);
+        if (linkMatch) {
+          tokens.push(
+            <a
+              key={`${lineIdx}-${match.index}`}
+              href={linkMatch[2]}
+              target="_blank"
+              rel="noreferrer"
+              className="text-sky-400 hover:text-sky-300 underline font-medium"
+            >
+              {linkMatch[1]}
+            </a>
+          );
+        }
+      }
+      lastIndex = regex.lastIndex;
+    }
+
+    if (lastIndex < displayLine.length) {
+      tokens.push(displayLine.substring(lastIndex));
+    }
+
+    return (
+      <div key={lineIdx} className={isBullet ? 'flex items-start gap-1.5 ml-2 my-0.5' : 'min-h-[1.15rem]'}>
+        {isBullet && <span className="text-sky-400 select-none">•</span>}
+        <span className="leading-relaxed">{tokens.length > 0 ? tokens : ' '}</span>
+      </div>
+    );
+  });
+}
+
+/**
  * ChatTab
  * Conversation stream rendering user bubbles, assistant cards, and zero-token deterministic badges.
  */
@@ -44,7 +114,7 @@ export const ChatTab: FC<ChatTabProps> = ({
                 : 'bg-slate-900/90 text-slate-200 rounded-tl-sm border border-white/10 shadow-md backdrop-blur-md'
             }`}
           >
-            <div className="whitespace-pre-wrap">{msg.content}</div>
+            <div>{renderFormattedContent(msg.content)}</div>
 
             {msg.isZeroToken && (
               <div className="mt-1.5 text-[9px] text-emerald-400 font-tabular font-semibold flex items-center gap-1">

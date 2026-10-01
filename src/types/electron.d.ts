@@ -76,6 +76,7 @@ export interface FloatCompanionAPI {
     }) => Promise<{ success: boolean; sessionStartTimestamp: number }>;
     stopSession: () => Promise<{ success: boolean }>;
     onDistractionDetected: (callback: (data: DistractionEvent) => void) => () => void;
+    onDistractionCleared?: (callback: () => void) => () => void;
     // Backward compatibility aliases
     start: (durationMins: number, task: string) => Promise<{ success: boolean }>;
     stop: () => Promise<{ success: boolean }>;

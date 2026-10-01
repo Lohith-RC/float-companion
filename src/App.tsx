@@ -1,11 +1,12 @@
 import { useEffect, useState, lazy, Suspense } from 'react';
 import { useAppStore } from './store/useAppStore';
+import { useToastStore } from './store/useToastStore';
 import { FloatingOrb } from './components/FloatingOrb';
 import { ExpandedTray } from './components/ExpandedTray';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { ToastContainer } from './components/common/ToastContainer';
 import { sounds } from './services/soundEffects';
-import { loadSavedMessages, loadSavedTasks } from './db/indexedDB';
+import { loadSavedMessages, loadSavedTasks, recordFocusSession } from './db/indexedDB';
 import { DistractionEvent } from './types/electron';
 
 // Code-split heavy full-screen canvas overlay
@@ -14,7 +15,7 @@ const ScreenCanvas = lazy(() =>
 );
 
 export default function App() {
-  const { mode, setMode, setDistractionAlert, setFocusing, isFocusing } = useAppStore();
+  const { mode, setMode, setDistractionAlert, startFocus, stopFocus, isFocusing } = useAppStore();
   const [canvasActive, setCanvasActive] = useState(false);
 
   // Restore messages and tasks from local IndexedDB on startup
@@ -32,9 +33,36 @@ export default function App() {
     });
   }, []);
 
+  // Persistent background focus sprint ticker (persists across Orb and Tray modes)
+  useEffect(() => {
+    let interval: NodeJS.Timeout | undefined;
+    if (isFocusing) {
+      interval = setInterval(() => {
+        const finished = useAppStore.getState().tickFocusSeconds();
+        if (finished) {
+          sounds.playSuccess();
+          const { activeFocusTask, selectedSprintDuration } = useAppStore.getState();
+          recordFocusSession({
+            id: Date.now().toString(),
+            taskTitle: activeFocusTask || 'Focus Sprint',
+            durationMins: selectedSprintDuration,
+            completedAt: Date.now(),
+            distractionsCaught: 0,
+          });
+          useToastStore.getState().showToast('🎉 Focus Sprint Completed!', 'success');
+        }
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isFocusing]);
+
   // Listen to IPC mode changes and distraction events
   useEffect(() => {
     let unsubscribeDistraction: (() => void) | undefined;
+    let unsubscribeCleared: (() => void) | undefined;
+
     if (window.electronAPI?.focus?.onDistraction) {
       unsubscribeDistraction = window.electronAPI.focus.onDistraction((data: DistractionEvent) => {
         sounds.playAlert();
@@ -43,6 +71,12 @@ export default function App() {
           title: data.windowTitle,
           keyword: data.matchedRule || 'Distraction',
         });
+      });
+    }
+
+    if (window.electronAPI?.focus?.onDistractionCleared) {
+      unsubscribeCleared = window.electronAPI.focus.onDistractionCleared(() => {
+        setDistractionAlert(null);
       });
     }
 
@@ -68,11 +102,11 @@ export default function App() {
       if (e.ctrlKey && e.shiftKey && (e.key === 'F' || e.key === 'f')) {
         e.preventDefault();
         if (!isFocusing) {
-          setFocusing(true, 'Instant Focus Sprint', 25);
+          startFocus(25, 'Instant Focus Sprint');
           sounds.playChime();
           window.electronAPI?.focus?.start?.(25, 'Instant Focus Sprint');
         } else {
-          setFocusing(false);
+          stopFocus();
           window.electronAPI?.focus?.stop?.();
         }
       }
@@ -82,9 +116,10 @@ export default function App() {
 
     return () => {
       unsubscribeDistraction?.();
+      unsubscribeCleared?.();
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [mode, canvasActive, isFocusing, setDistractionAlert, setFocusing]);
+  }, [mode, canvasActive, isFocusing, setDistractionAlert, startFocus, stopFocus]);
 
   const handleExpand = async () => {
     setMode('tray');

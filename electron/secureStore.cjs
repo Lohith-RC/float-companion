@@ -40,7 +40,9 @@ class SecureStore {
       } else {
         payload = Buffer.from(dataStr, 'utf-8');
       }
-      fs.writeFileSync(this.storePath, payload);
+      const tmpPath = `${this.storePath}.tmp`;
+      fs.writeFileSync(tmpPath, payload);
+      fs.renameSync(tmpPath, this.storePath);
       return true;
     } catch (err) {
       console.error('Failed to write to secure store:', err.message);
