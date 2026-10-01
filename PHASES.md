@@ -44,13 +44,13 @@ Phase 8: Production Packaging, NSIS Installer (.exe) & System Hardening
 Establish a clean, modern TypeScript monorepo combining Vite (React 19) and Electron with Tailwind CSS, Lucide icons, and Framer Motion.
 
 ### 2. Files to Create
-* [`package.json`](file:///C:/Users/lohit/OneDrive/Desktop/float-companion/package.json) — Dependencies, scripts, and build metadata.
-* [`vite.config.ts`](file:///C:/Users/lohit/OneDrive/Desktop/float-companion/vite.config.ts) — Vite config with React plugin and base relative paths.
-* [`tsconfig.json`](file:///C:/Users/lohit/OneDrive/Desktop/float-companion/tsconfig.json) — Strict TypeScript configuration.
-* [`tailwind.config.js`](file:///C:/Users/lohit/OneDrive/Desktop/float-companion/tailwind.config.js) — Design tokens, glassmorphic styling, and animation utilities.
-* [`postcss.config.js`](file:///C:/Users/lohit/OneDrive/Desktop/float-companion/postcss.config.js) — PostCSS plugins.
-* [`src/index.css`](file:///C:/Users/lohit/OneDrive/Desktop/float-companion/src/index.css) — Custom glassmorphism, scrollbars, and dark palette.
-* [`index.html`](file:///C:/Users/lohit/OneDrive/Desktop/float-companion/index.html) — HTML root with transparent body.
+* [`package.json`](./package.json) — Dependencies, scripts, and build metadata.
+* [`vite.config.ts`](./vite.config.ts) — Vite config with React plugin and base relative paths.
+* [`tsconfig.json`](./tsconfig.json) — Strict TypeScript configuration.
+* [`tailwind.config.js`](./tailwind.config.js) — Design tokens, glassmorphic styling, and animation utilities.
+* [`postcss.config.js`](./postcss.config.js) — PostCSS plugins.
+* [`src/index.css`](./src/index.css) — Custom glassmorphism, scrollbars, and dark palette.
+* [`index.html`](./index.html) — HTML root with transparent body.
 
 ### 3. Step-by-Step Tasks
 1. Run `npm init -y` and configure `"type": "module"`.
@@ -70,10 +70,10 @@ Establish a clean, modern TypeScript monorepo combining Vite (React 19) and Elec
 Build the Electron main process to render a transparent, frameless, always-on-top window that resizes smoothly and responds to the global summon hotkey (`Ctrl + Shift + Space`).
 
 ### 2. Files to Create
-* [`electron/main.cjs`](file:///C:/Users/lohit/OneDrive/Desktop/float-companion/electron/main.cjs) — Electron lifecycle, BrowserWindow initialization, and window geometry.
-* [`electron/preload.cjs`](file:///C:/Users/lohit/OneDrive/Desktop/float-companion/electron/preload.cjs) — Secure `contextBridge` exposing `window.electronAPI`.
-* [`electron/windowManager.cjs`](file:///C:/Users/lohit/OneDrive/Desktop/float-companion/electron/windowManager.cjs) — Smooth transitions between Orb mode (68x68) and Tray mode (420x600).
-* [`electron/hotkeyManager.cjs`](file:///C:/Users/lohit/OneDrive/Desktop/float-companion/electron/hotkeyManager.cjs) — `globalShortcut` registration and collision handling.
+* [`electron/main.cjs`](./electron/main.cjs) — Electron lifecycle, BrowserWindow initialization, and window geometry.
+* [`electron/preload.cjs`](./electron/preload.cjs) — Secure `contextBridge` exposing `window.electronAPI`.
+* [`electron/windowManager.cjs`](./electron/windowManager.cjs) — Smooth transitions between Orb mode (68x68) and Tray mode (420x600).
+* [`electron/hotkeyManager.cjs`](./electron/hotkeyManager.cjs) — `globalShortcut` registration and collision handling.
 
 ### 3. Step-by-Step Tasks
 1. Initialize `BrowserWindow` with:
@@ -98,12 +98,12 @@ Build the Electron main process to render a transparent, frameless, always-on-to
 Create the visual frontend containing the draggable Orb widget and the animated expanding glassmorphic panel using React 19, Framer Motion, and Tailwind CSS.
 
 ### 2. Files to Create
-* [`src/App.tsx`](file:///C:/Users/lohit/OneDrive/Desktop/float-companion/src/App.tsx) — Main container managing mode state (`orb` vs `tray`).
-* [`src/components/FloatingOrb.tsx`](file:///C:/Users/lohit/OneDrive/Desktop/float-companion/src/components/FloatingOrb.tsx) — Circular interactive widget with idle glow, status indicator, and drag handles.
-* [`src/components/ExpandedTray.tsx`](file:///C:/Users/lohit/OneDrive/Desktop/float-companion/src/components/ExpandedTray.tsx) — Sliding glass panel with header, content tabs, and prompt input.
-* [`src/components/ChatView.tsx`](file:///C:/Users/lohit/OneDrive/Desktop/float-companion/src/components/ChatView.tsx) — Message stream with Markdown, code block copy, and action badges.
-* [`src/components/PromptBar.tsx`](file:///C:/Users/lohit/OneDrive/Desktop/float-companion/src/components/PromptBar.tsx) — Auto-resizing textarea, mic button, and submit hotkey handler (`Enter`).
-* [`src/store/useAppStore.ts`](file:///C:/Users/lohit/OneDrive/Desktop/float-companion/src/store/useAppStore.ts) — Zustand state store for UI mode, active tab, and message queue.
+* [`src/App.tsx`](./src/App.tsx) — Main container managing mode state (`orb` vs `tray`).
+* [`src/components/FloatingOrb.tsx`](./src/components/FloatingOrb.tsx) — Circular interactive widget with idle glow, status indicator, and drag handles.
+* [`src/components/ExpandedTray.tsx`](./src/components/ExpandedTray.tsx) — Sliding glass panel with header, content tabs, and prompt input.
+* [`src/components/ChatView.tsx`](./src/components/ChatView.tsx) — Message stream with Markdown, code block copy, and action badges.
+* [`src/components/PromptBar.tsx`](./src/components/PromptBar.tsx) — Auto-resizing textarea, mic button, and submit hotkey handler (`Enter`).
+* [`src/store/useAppStore.ts`](./src/store/useAppStore.ts) — Zustand state store for UI mode, active tab, and message queue.
 
 ### 3. Step-by-Step Tasks
 1. Build `FloatingOrb`:
@@ -129,11 +129,11 @@ Create the visual frontend containing the draggable Orb widget and the animated 
 Implement the client-side intent interceptor that resolves daily commands (clock, hardware specs, app launches, document creation) in <10ms with zero LLM API calls.
 
 ### 2. Files to Create
-* [`src/ai/fastRouter.ts`](file:///C:/Users/lohit/OneDrive/Desktop/float-companion/src/ai/fastRouter.ts) — Core router engine matching regex patterns and dispatching actions.
-* [`src/ai/intents/clockIntent.ts`](file:///C:/Users/lohit/OneDrive/Desktop/float-companion/src/ai/intents/clockIntent.ts) — Local system time and date formatter.
-* [`src/ai/intents/appLaunchIntent.ts`](file:///C:/Users/lohit/OneDrive/Desktop/float-companion/src/ai/intents/appLaunchIntent.ts) — App name alias resolver (`vscode`, `chrome`, `notepad`, `calc`, etc.).
-* [`src/ai/intents/systemStatsIntent.ts`](file:///C:/Users/lohit/OneDrive/Desktop/float-companion/src/ai/intents/systemStatsIntent.ts) — RAM and disk space intent mapper.
-* [`src/ai/intents/documentIntent.ts`](file:///C:/Users/lohit/OneDrive/Desktop/float-companion/src/ai/intents/documentIntent.ts) — Direct client-side `/note` and `/pdf` exporter.
+* [`src/ai/fastRouter.ts`](./src/ai/fastRouter.ts) — Core router engine matching regex patterns and dispatching actions.
+* [`src/ai/intents/clockIntent.ts`](./src/ai/intents/clockIntent.ts) — Local system time and date formatter.
+* [`src/ai/intents/appLaunchIntent.ts`](./src/ai/intents/appLaunchIntent.ts) — App name alias resolver (`vscode`, `chrome`, `notepad`, `calc`, etc.).
+* [`src/ai/intents/systemStatsIntent.ts`](./src/ai/intents/systemStatsIntent.ts) — RAM and disk space intent mapper.
+* [`src/ai/intents/documentIntent.ts`](./src/ai/intents/documentIntent.ts) — Direct client-side `/note` and `/pdf` exporter.
 
 ### 3. Step-by-Step Tasks
 1. Write pattern dictionary matching:
@@ -158,12 +158,12 @@ Implement the client-side intent interceptor that resolves daily commands (clock
 Connect Groq, Google Gemini, and local Ollama with streaming tokens, context pruning, and an automatic, zero-delay API key rotation pool.
 
 ### 2. Files to Create
-* [`src/ai/orchestrator.ts`](file:///C:/Users/lohit/OneDrive/Desktop/float-companion/src/ai/orchestrator.ts) — Provider dispatcher and streaming reader.
-* [`src/ai/providers/groqProvider.ts`](file:///C:/Users/lohit/OneDrive/Desktop/float-companion/src/ai/providers/groqProvider.ts) — Groq client (`llama-3.3-70b-versatile`).
-* [`src/ai/providers/geminiProvider.ts`](file:///C:/Users/lohit/OneDrive/Desktop/float-companion/src/ai/providers/geminiProvider.ts) — Google Gemini client (`gemini-2.5-flash`).
-* [`src/ai/providers/ollamaProvider.ts`](file:///C:/Users/lohit/OneDrive/Desktop/float-companion/src/ai/providers/ollamaProvider.ts) — Offline local Ollama runner.
-* [`src/ai/keyPool.ts`](file:///C:/Users/lohit/OneDrive/Desktop/float-companion/src/ai/keyPool.ts) — Key status registry with 0ms rotation on HTTP 429 errors.
-* [`src/ai/contextCompressor.ts`](file:///C:/Users/lohit/OneDrive/Desktop/float-companion/src/ai/contextCompressor.ts) — Historical message compressor and token pruner.
+* [`src/ai/orchestrator.ts`](./src/ai/orchestrator.ts) — Provider dispatcher and streaming reader.
+* [`src/ai/providers/groqProvider.ts`](./src/ai/providers/groqProvider.ts) — Groq client (`llama-3.3-70b-versatile`).
+* [`src/ai/providers/geminiProvider.ts`](./src/ai/providers/geminiProvider.ts) — Google Gemini client (`gemini-2.5-flash`).
+* [`src/ai/providers/ollamaProvider.ts`](./src/ai/providers/ollamaProvider.ts) — Offline local Ollama runner.
+* [`src/ai/keyPool.ts`](./src/ai/keyPool.ts) — Key status registry with 0ms rotation on HTTP 429 errors.
+* [`src/ai/contextCompressor.ts`](./src/ai/contextCompressor.ts) — Historical message compressor and token pruner.
 
 ### 3. Step-by-Step Tasks
 1. Implement streaming API calls using fetch and Server-Sent Events / ReadableStream.
@@ -186,10 +186,10 @@ Connect Groq, Google Gemini, and local Ollama with streaming tokens, context pru
 Establish safe, non-blocking execution of native OS tasks on Windows (PowerShell) and macOS (POSIX/AppleScript) guarded by a multi-tier de-obfuscation security kernel.
 
 ### 2. Files to Create
-* [`electron/osActionHandler.cjs`](file:///C:/Users/lohit/OneDrive/Desktop/float-companion/electron/osActionHandler.cjs) — Spawned PowerShell daemon with non-blocking stdin.
-* [`electron/securityKernel.cjs`](file:///C:/Users/lohit/OneDrive/Desktop/float-companion/electron/securityKernel.cjs) — Syntax de-obfuscator and dangerous command blacklist.
-* [`electron/appResolver.cjs`](file:///C:/Users/lohit/OneDrive/Desktop/float-companion/electron/appResolver.cjs) — Registry / PATH executable lookup for installed apps.
-* [`electron/windowFocus.cjs`](file:///C:/Users/lohit/OneDrive/Desktop/float-companion/electron/windowFocus.cjs) — Win32 `SetForegroundWindow` API bridge.
+* [`electron/osActionHandler.cjs`](./electron/osActionHandler.cjs) — Spawned PowerShell daemon with non-blocking stdin.
+* [`electron/securityKernel.cjs`](./electron/securityKernel.cjs) — Syntax de-obfuscator and dangerous command blacklist.
+* [`electron/appResolver.cjs`](./electron/appResolver.cjs) — Registry / PATH executable lookup for installed apps.
+* [`electron/windowFocus.cjs`](./electron/windowFocus.cjs) — Win32 `SetForegroundWindow` API bridge.
 
 ### 3. Step-by-Step Tasks
 1. Launch a persistent PowerShell stdin session: `spawn('powershell.exe', ['-NoProfile', '-Command', '-'])`.
@@ -216,10 +216,10 @@ Establish safe, non-blocking execution of native OS tasks on Windows (PowerShell
 Build an active focus enforcement daemon that polls the foreground window title every 3 seconds, alerts on distraction sites, and manages Pomodoro sprints.
 
 ### 2. Files to Create
-* [`electron/focusPoller.cjs`](file:///C:/Users/lohit/OneDrive/Desktop/float-companion/electron/focusPoller.cjs) — Background active window title polling loop.
-* [`src/components/FocusModeView.tsx`](file:///C:/Users/lohit/OneDrive/Desktop/float-companion/src/components/FocusModeView.tsx) — Pomodoro timer countdown ring and sprint controls.
-* [`src/components/DistractionBanner.tsx`](file:///C:/Users/lohit/OneDrive/Desktop/float-companion/src/components/DistractionBanner.tsx) — Alert banner with red pulsating glow.
-* [`src/services/soundEffects.ts`](file:///C:/Users/lohit/OneDrive/Desktop/float-companion/src/services/soundEffects.ts) — Web Audio API synthesized chimes for sprint start and distraction warnings.
+* [`electron/focusPoller.cjs`](./electron/focusPoller.cjs) — Background active window title polling loop.
+* [`src/components/FocusModeView.tsx`](./src/components/FocusModeView.tsx) — Pomodoro timer countdown ring and sprint controls.
+* [`src/components/DistractionBanner.tsx`](./src/components/DistractionBanner.tsx) — Alert banner with red pulsating glow.
+* [`src/services/soundEffects.ts`](./src/services/soundEffects.ts) — Web Audio API synthesized chimes for sprint start and distraction warnings.
 
 ### 3. Step-by-Step Tasks
 1. In `focusPoller.cjs`, use user32.dll `GetForegroundWindow` + `GetWindowTextW` via PowerShell/C# one-liner or native addon.
@@ -243,9 +243,9 @@ Build an active focus enforcement daemon that polls the foreground window title 
 Ensure every chat message, task, and focus session is committed locally to IndexedDB before any network operations, maintaining complete privacy.
 
 ### 2. Files to Create
-* [`src/db/indexedDB.ts`](file:///C:/Users/lohit/OneDrive/Desktop/float-companion/src/db/indexedDB.ts) — `idb-keyval` wrapper with typed stores for `chats`, `sprints`, and `settings`.
-* [`src/db/habitTracker.ts`](file:///C:/Users/lohit/OneDrive/Desktop/float-companion/src/db/habitTracker.ts) — Computes daily focus minutes and sprint completion ratios.
-* [`src/components/SettingsView.tsx`](file:///C:/Users/lohit/OneDrive/Desktop/float-companion/src/components/SettingsView.tsx) — API Key management, custom hotkeys, and "Purge All Data" button.
+* [`src/db/indexedDB.ts`](./src/db/indexedDB.ts) — `idb-keyval` wrapper with typed stores for `chats`, `sprints`, and `settings`.
+* [`src/db/habitTracker.ts`](./src/db/habitTracker.ts) — Computes daily focus minutes and sprint completion ratios.
+* [`src/components/SettingsView.tsx`](./src/components/SettingsView.tsx) — API Key management, custom hotkeys, and "Purge All Data" button.
 
 ### 3. Step-by-Step Tasks
 1. Initialize IndexedDB stores:
@@ -268,9 +268,9 @@ Ensure every chat message, task, and focus session is committed locally to Index
 Package the entire application into a standalone Windows NSIS installer (`.exe`) that installs cleanly without requiring Node.js or Git on the target machine.
 
 ### 2. Files to Create / Configure
-* [`electron-builder.json`](file:///C:/Users/lohit/OneDrive/Desktop/float-companion/electron-builder.json) — Packaging configuration (NSIS, icons, file associations, auto-update).
-* [`scripts/build-win.mjs`](file:///C:/Users/lohit/OneDrive/Desktop/float-companion/scripts/build-win.mjs) — Bundling and packaging pipeline script.
-* [`build/icon.ico`](file:///C:/Users/lohit/OneDrive/Desktop/float-companion/build/icon.ico) — Application icon for Windows taskbar and installer.
+* [`electron-builder.json`](./electron-builder.json) — Packaging configuration (NSIS, icons, file associations, auto-update).
+* [`scripts/build-win.mjs`](./scripts/build-win.mjs) — Bundling and packaging pipeline script.
+* [`build/icon.ico`](./build/icon.ico) — Application icon for Windows taskbar and installer.
 
 ### 3. Step-by-Step Tasks
 1. Run `npm run build` to compile TypeScript and produce Vite production assets in `dist/`.

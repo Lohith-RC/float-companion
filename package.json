@@ -1,9 +1,35 @@
 {
   "name": "float-companion",
   "version": "1.0.0",
-  "description": "Autonomous Floating AI Desktop Companion",
+  "description": "Autonomous Floating AI Desktop Companion with Multi-Model Intelligence, Vision, Voice, and Native OS Automation",
   "main": "electron/main.cjs",
   "type": "module",
+  "author": "Lohith-RC",
+  "license": "MIT",
+  "homepage": "https://github.com/Lohith-RC/float-companion#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Lohith-RC/float-companion.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Lohith-RC/float-companion/issues"
+  },
+  "keywords": [
+    "ai",
+    "desktop-companion",
+    "electron",
+    "react-19",
+    "groq",
+    "llama-3-3",
+    "google-gemini",
+    "multimodal",
+    "voice-dictation",
+    "focus-guardian",
+    "pomodoro",
+    "dpapi-security",
+    "zero-token",
+    "glassmorphism"
+  ],
   "scripts": {
     "dev": "concurrently --kill-others-on-fail \"npm run dev:vite\" \"npm run dev:electron\"",
     "dev:vite": "vite",
