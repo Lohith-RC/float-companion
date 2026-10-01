@@ -14,6 +14,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getStats: () => ipcRenderer.invoke('os:get-system-stats'),
     launchApp: (target) => ipcRenderer.invoke('os:launch-app', { target }),
     typeText: (text, delayMs = 150) => ipcRenderer.invoke('os:type-text', { text, delayMs }),
+    captureScreen: () => ipcRenderer.invoke('os:capture-screen'),
   },
   focus: {
     startSession: (payload) => ipcRenderer.invoke('focus:start-session', payload),

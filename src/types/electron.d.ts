@@ -23,6 +23,14 @@ export interface LaunchAppResponse {
   message?: string;
 }
 
+export interface CaptureScreenResponse {
+  success: boolean;
+  dataUrl?: string;
+  base64Data?: string;
+  mimeType?: string;
+  error?: string;
+}
+
 export interface TypeTextResponse {
   success: boolean;
   error?: string;
@@ -58,6 +66,7 @@ export interface FloatCompanionAPI {
     getStats: () => Promise<SystemStatsResponse>;
     launchApp: (target: string) => Promise<LaunchAppResponse>;
     typeText: (text: string, delayMs?: number) => Promise<TypeTextResponse>;
+    captureScreen: () => Promise<CaptureScreenResponse>;
   };
   focus: {
     startSession: (payload: {

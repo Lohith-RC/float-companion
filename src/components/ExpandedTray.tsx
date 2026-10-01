@@ -2,7 +2,7 @@ import { FC, useState, useRef, useEffect, lazy, Suspense } from 'react';
 import { AlertCircle } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { matchLocalIntent } from '../ai/fastRouter';
-import { orchestrator } from '../ai/orchestrator';
+import { orchestrator, ImageAttachment } from '../ai/orchestrator';
 import { sounds } from '../services/soundEffects';
 import {
   UserSettings,
@@ -55,6 +55,7 @@ export const ExpandedTray: FC<ExpandedTrayProps> = ({ onCollapse, onOpenCanvas }
   } = useAppStore();
 
   const [inputPrompt, setInputPrompt] = useState('');
+  const [attachedImage, setAttachedImage] = useState<ImageAttachment | null>(null);
   const [systemStats, setSystemStats] = useState<SystemStatsResponse | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingContent, setStreamingContent] = useState('');
@@ -119,25 +120,48 @@ export const ExpandedTray: FC<ExpandedTrayProps> = ({ onCollapse, onOpenCanvas }
     return () => clearInterval(timer);
   }, [isFocusing, secondsRemaining, activeFocusTask, selectedDuration, setFocusing]);
 
+  const handleCaptureScreen = async () => {
+    if (window.electronAPI?.os?.captureScreen) {
+      sounds.playClick();
+      const res = await window.electronAPI.os.captureScreen();
+      if (res.success && res.dataUrl && res.base64Data) {
+        setAttachedImage({
+          dataUrl: res.dataUrl,
+          base64Data: res.base64Data,
+          mimeType: res.mimeType || 'image/jpeg',
+        });
+        sounds.playChime();
+      } else {
+        alert(res.error || 'Failed to capture screen.');
+      }
+    }
+  };
+
   const handleSubmit = async (e?: React.FormEvent, overridePrompt?: string) => {
     if (e) e.preventDefault();
     const prompt = (overridePrompt || inputPrompt).trim();
-    if (!prompt || isStreaming) return;
+    if ((!prompt && !attachedImage) || isStreaming) return;
 
     sounds.playClick();
     setInputPrompt('');
-    addMessage({ role: 'user', content: prompt });
+    const currentAttachment = attachedImage;
+    setAttachedImage(null);
+
+    const effectivePrompt = prompt || (currentAttachment ? 'Analyze this attached screen capture and identify key information or errors.' : '');
+    addMessage({ role: 'user', content: effectivePrompt });
 
     try {
-      const routerResult = await matchLocalIntent(prompt);
+      if (!currentAttachment) {
+        const routerResult = await matchLocalIntent(effectivePrompt);
 
-      if (routerResult.handled && routerResult.reply) {
-        addMessage({
-          role: 'assistant',
-          content: routerResult.reply,
-          isZeroToken: true,
-        });
-        return;
+        if (routerResult.handled && routerResult.reply) {
+          addMessage({
+            role: 'assistant',
+            content: routerResult.reply,
+            isZeroToken: true,
+          });
+          return;
+        }
       }
 
       if (!userSettings) return;
@@ -145,7 +169,7 @@ export const ExpandedTray: FC<ExpandedTrayProps> = ({ onCollapse, onOpenCanvas }
       setIsStreaming(true);
       setStreamingContent('');
 
-      await orchestrator.streamPrompt(prompt, messages, userSettings, {
+      await orchestrator.streamPrompt(effectivePrompt, messages, userSettings, {
         onChunk: (chunkText) => {
           setStreamingContent(chunkText);
         },
@@ -167,7 +191,7 @@ export const ExpandedTray: FC<ExpandedTrayProps> = ({ onCollapse, onOpenCanvas }
           });
           sounds.playAlert();
         },
-      });
+      }, currentAttachment || undefined);
     } catch (err: unknown) {
       setIsStreaming(false);
       setStreamingContent('');
@@ -315,6 +339,9 @@ export const ExpandedTray: FC<ExpandedTrayProps> = ({ onCollapse, onOpenCanvas }
           <ChatInputBar
             inputPrompt={inputPrompt}
             isStreaming={isStreaming}
+            attachedImage={attachedImage}
+            onRemoveAttachment={() => setAttachedImage(null)}
+            onCaptureScreen={handleCaptureScreen}
             onChangePrompt={setInputPrompt}
             onSubmit={handleSubmit}
           />

@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, globalShortcut, screen, Tray, Menu, nativeImage, clipboard, shell, session } = require('electron');
+const { app, BrowserWindow, ipcMain, globalShortcut, screen, Tray, Menu, nativeImage, clipboard, shell, session, desktopCapturer } = require('electron');
 const path = require('path');
 const { exec } = require('child_process');
 const os = require('os');
@@ -380,6 +380,34 @@ ipcMain.handle('os:type-text', async (_event, { text, delayMs = 150 }) => {
   }
 
   return { success: true };
+});
+
+ipcMain.handle('os:capture-screen', async () => {
+  try {
+    const primaryDisplay = screen.getPrimaryDisplay();
+    const sources = await desktopCapturer.getSources({
+      types: ['screen'],
+      thumbnailSize: {
+        width: Math.min(primaryDisplay.size.width || 1920, 1920),
+        height: Math.min(primaryDisplay.size.height || 1080, 1080),
+      },
+    });
+
+    if (sources && sources.length > 0) {
+      const image = sources[0].thumbnail;
+      const dataUrl = image.toDataURL();
+      const base64Data = image.toJPEG(85).toString('base64');
+      return {
+        success: true,
+        dataUrl,
+        base64Data,
+        mimeType: 'image/jpeg',
+      };
+    }
+    return { success: false, error: 'No display source detected' };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
 });
 
 // ==============================================================================

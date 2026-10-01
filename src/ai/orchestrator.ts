@@ -4,6 +4,12 @@ import { UserSettings } from '../db/indexedDB';
 
 import { getErrorMessage } from '../utils/errorUtils';
 
+export interface ImageAttachment {
+  dataUrl: string;
+  base64Data: string;
+  mimeType: string;
+}
+
 export interface StreamCallbacks {
   onChunk: (chunk: string) => void;
   onDone: (fullText: string) => void;
@@ -24,11 +30,29 @@ export class AIOrchestrator {
     prompt: string,
     history: ChatMessage[],
     settings: UserSettings,
-    callbacks: StreamCallbacks
+    callbacks: StreamCallbacks,
+    imageAttachment?: ImageAttachment
   ): Promise<void> {
     this.cancelCurrentStream();
     this.abortController = new AbortController();
     const signal = this.abortController.signal;
+
+    // Multimodal Vision Route: If image attached, route to Gemini 2.5 Flash
+    if (imageAttachment) {
+      if (settings.geminiKey?.trim()) {
+        try {
+          await this.streamGemini(prompt, settings.geminiKey.trim(), signal, callbacks, imageAttachment);
+          return;
+        } catch (err: unknown) {
+          if (err instanceof Error && err.name === 'AbortError') return;
+          callbacks.onError(`Gemini Vision Error: ${getErrorMessage(err)}`);
+          return;
+        }
+      } else {
+        callbacks.onError('Screen Vision analysis requires a Gemini API key. Please configure your key in Settings.');
+        return;
+      }
+    }
 
     const messages = prepareOptimizedContext([...history, { id: 'temp', role: 'user', content: prompt, timestamp: Date.now() }]);
 
@@ -155,15 +179,26 @@ export class AIOrchestrator {
     prompt: string,
     apiKey: string,
     signal: AbortSignal,
-    callbacks: StreamCallbacks
+    callbacks: StreamCallbacks,
+    imageAttachment?: ImageAttachment
   ): Promise<void> {
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key=${apiKey}`;
+
+    const parts: Array<Record<string, unknown>> = [{ text: prompt }];
+    if (imageAttachment) {
+      parts.unshift({
+        inlineData: {
+          mimeType: imageAttachment.mimeType || 'image/jpeg',
+          data: imageAttachment.base64Data,
+        },
+      });
+    }
 
     const response = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        contents: [{ role: 'user', parts }],
       }),
       signal,
     });
