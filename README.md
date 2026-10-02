@@ -12,7 +12,7 @@
 [![Tailwind](https://img.shields.io/badge/TailwindCSS-3.4-38bdf8?style=for-the-badge&logo=tailwindcss)](https://tailwindcss.com/)
 [![License](https://img.shields.io/badge/License-MIT-10b981?style=for-the-badge)](./LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-Windows%2010%2F11%20%7C%20macOS-f59e0b?style=for-the-badge)]()
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/Lohith-RC/float-companion)
+[![Vercel](https://img.shields.io/badge/Vercel-Live%20Online-black?style=for-the-badge&logo=vercel)](https://float-companion.vercel.app/)
 
 <br />
 
@@ -32,9 +32,9 @@
 
 ## 📦 Download Desktop App & Live Demo
 
-* **⚡ Primary Cloud Live Site:** 👉 **[https://cbrn-x.antideploy.com](https://cbrn-x.antideploy.com)** *(Interactive live web simulator & feature tour)*
-* **🐙 GitHub Pages Live Mirror:** 👉 **[https://lohith-rc.github.io/float-companion/](https://lohith-rc.github.io/float-companion/)** *(Direct CDN hosted mirror)*
-* **▲ 1-Click Live Deploy on Vercel:** 👉 **[Deploy FloatCompanion on Vercel](https://vercel.com/new/clone?repository-url=https://github.com/Lohith-RC/float-companion)** *(Instant live hosting with zero config)*
+* **🚀 Official Live Website (Vercel):** 👉 **[https://float-companion.vercel.app/](https://float-companion.vercel.app/)** *(Live interactive web simulator & showcase)*
+* **🐙 GitHub Pages Mirror:** 👉 **[https://lohith-rc.github.io/float-companion/](https://lohith-rc.github.io/float-companion/)** *(Direct CDN hosted mirror)*
+* **⚡ Cloud Backup URL:** 👉 **[https://cbrn-x.antideploy.com](https://cbrn-x.antideploy.com)** *(High-availability cloud backup)*
 * **💻 Windows 10/11 Standalone App:** 👉 **[Download FloatCompanion v1.0.0 for Windows (.zip)](https://github.com/Lohith-RC/float-companion/releases/download/v1.0.0/FloatCompanion-v1.0.0-windows-x64.zip)** *(Extract and run `FloatCompanion.exe` — no install required)*
 * **📦 All Releases & Binaries:** 👉 **[GitHub Releases Page](https://github.com/Lohith-RC/float-companion/releases)**
 
