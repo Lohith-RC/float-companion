@@ -58,6 +58,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.invoke('auth:github-poll-token', { clientId, deviceCode }),
     getGithubProfile: (token) =>
       ipcRenderer.invoke('auth:github-get-profile', { token }),
+    startGoogleOAuth: (clientId) =>
+      ipcRenderer.invoke('auth:google-start-flow', { clientId }),
+    cancelGoogleOAuth: () =>
+      ipcRenderer.invoke('auth:google-cancel'),
     openExternal: (url) =>
       ipcRenderer.invoke('auth:open-external', { url }),
   },

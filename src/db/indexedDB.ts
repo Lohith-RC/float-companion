@@ -18,6 +18,18 @@ export interface UserSettings {
     email: string;
   } | null;
   githubClientId?: string;
+  googleClientId?: string;
+  authUser?: {
+    provider: 'github' | 'google';
+    id: string;
+    login?: string;
+    name: string;
+    avatarUrl: string;
+    htmlUrl?: string;
+    bio?: string;
+    publicRepos?: number;
+    email?: string;
+  } | null;
 }
 
 export interface FocusSessionRecord {

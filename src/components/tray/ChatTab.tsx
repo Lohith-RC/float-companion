@@ -101,11 +101,15 @@ const WelcomeCard: FC = () => {
         <div className="relative">
           <img
             src={user.avatarUrl}
-            alt={user.login}
+            alt={user.name || user.login || 'User'}
             className="w-12 h-12 rounded-2xl border-2 border-sky-400/50 object-cover shadow-[0_0_20px_rgba(56,189,248,0.25)]"
           />
-          <span className="absolute -bottom-1 -right-1 px-1.5 py-0.2 bg-emerald-500 text-[8px] font-bold text-slate-950 rounded-full border border-slate-900">
-            GH
+          <span
+            className={`absolute -bottom-1 -right-1 px-1.5 py-0.2 text-[8px] font-bold text-slate-950 rounded-full border border-slate-900 ${
+              user.provider === 'google' ? 'bg-sky-400' : 'bg-emerald-400'
+            }`}
+          >
+            {user.provider === 'google' ? 'G' : 'GH'}
           </span>
         </div>
       ) : (
@@ -115,11 +119,15 @@ const WelcomeCard: FC = () => {
       )}
       <div>
         <h2 className="text-sm font-bold text-white mb-0.5">
-          {user ? `Welcome back, @${user.login} 👋` : 'FloatCompanion'}
+          {user
+            ? `Welcome back, ${user.provider === 'google' ? user.name.split(' ')[0] : `@${user.login}`} 👋`
+            : 'FloatCompanion'}
         </h2>
         <p className="text-[11px] text-slate-400 max-w-[260px] leading-relaxed">
           {user?.bio
             ? user.bio.slice(0, 80)
+            : user?.email
+            ? `Signed in with Google (${user.email})`
             : 'Your ambient AI copilot. Ask anything, snap your screen, or use zero-token commands below.'}
         </p>
       </div>

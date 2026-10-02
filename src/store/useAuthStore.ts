@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { GitHubUserProfile } from '../types/electron';
+import { AuthUserProfile } from '../types/electron';
 import { loadSettings, saveSettings } from '../db/indexedDB';
 import { useToastStore } from './useToastStore';
 import { sounds } from '../services/soundEffects';
@@ -14,22 +14,29 @@ interface DeviceFlowState {
 }
 
 interface AuthState {
-  user: GitHubUserProfile | null;
+  user: AuthUserProfile | null;
   accessToken: string | null;
   isLoading: boolean;
   isPolling: boolean;
+  isGoogleLoading: boolean;
   isModalOpen: boolean;
+  activeAuthTab: 'all' | 'github' | 'google';
   customClientId: string;
+  customGoogleClientId: string;
   deviceFlow: DeviceFlowState | null;
 
   // Actions
   init: () => Promise<void>;
-  openModal: () => void;
+  openModal: (initialTab?: 'all' | 'github' | 'google') => void;
   closeModal: () => void;
+  setActiveAuthTab: (tab: 'all' | 'github' | 'google') => void;
   setCustomClientId: (clientId: string) => void;
+  setCustomGoogleClientId: (clientId: string) => void;
   startDeviceFlow: () => Promise<void>;
   cancelDeviceFlow: () => void;
   loginWithToken: (token: string) => Promise<boolean>;
+  startGoogleOAuth: () => Promise<boolean>;
+  cancelGoogleOAuth: () => void;
   logout: () => Promise<void>;
 }
 
@@ -40,60 +47,69 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   accessToken: null,
   isLoading: false,
   isPolling: false,
+  isGoogleLoading: false,
   isModalOpen: false,
+  activeAuthTab: 'all',
   customClientId: '',
+  customGoogleClientId: '',
   deviceFlow: null,
 
   init: async () => {
     try {
       const settings = await loadSettings();
-      if (settings.githubClientId) {
-        set({ customClientId: settings.githubClientId });
-      }
+      if (settings.githubClientId) set({ customClientId: settings.githubClientId });
+      if (settings.googleClientId) set({ customGoogleClientId: settings.googleClientId });
 
-      // Check Electron safeStorage DPAPI vault for cached token
+      // Check for cached profile
+      const cachedProfile = settings.authUser || (settings.githubUser ? {
+        provider: 'github' as const,
+        id: settings.githubUser.login,
+        login: settings.githubUser.login,
+        name: settings.githubUser.name,
+        avatarUrl: settings.githubUser.avatarUrl,
+        htmlUrl: settings.githubUser.htmlUrl,
+        bio: settings.githubUser.bio,
+        publicRepos: settings.githubUser.publicRepos,
+        email: settings.githubUser.email,
+      } : null);
+
+      // Check Electron safeStorage DPAPI vault for cached tokens
       let token: string | null = null;
       if (window.electronAPI?.store?.getSecureKey) {
-        const res = await window.electronAPI.store.getSecureKey('github_token');
-        token = res.key || null;
+        if (cachedProfile?.provider === 'google') {
+          const res = await window.electronAPI.store.getSecureKey('google_token');
+          token = res.key || null;
+        } else {
+          const res = await window.electronAPI.store.getSecureKey('github_token');
+          token = res.key || null;
+        }
       }
 
       // Fallback: check localStorage for web simulator mode
       if (!token && typeof localStorage !== 'undefined') {
-        token = localStorage.getItem('fc_github_token');
+        token = localStorage.getItem('fc_auth_token');
       }
 
-      if (token && window.electronAPI?.auth?.getGithubProfile) {
-        set({ isLoading: true, accessToken: token });
-        const res = await window.electronAPI.auth.getGithubProfile(token);
-        if (res.success && res.profile) {
-          set({ user: res.profile, isLoading: false });
-          // Save hydrated profile to local settings
-          await saveSettings({ ...settings, githubUser: res.profile });
-          return;
-        }
-      }
-
-      // If token verification failed or no token, fall back to cached profile
-      if (settings.githubUser) {
-        set({ user: settings.githubUser, accessToken: token, isLoading: false });
+      if (cachedProfile) {
+        set({ user: cachedProfile, accessToken: token, isLoading: false });
       }
     } catch {
       set({ isLoading: false });
     }
   },
 
-  openModal: () => {
-    set({ isModalOpen: true });
-    // Automatically trigger device flow when modal opens if not already authenticated
-    if (!get().user && !get().deviceFlow && !get().isPolling) {
-      get().startDeviceFlow();
-    }
+  openModal: (initialTab = 'all') => {
+    set({ isModalOpen: true, activeAuthTab: initialTab });
   },
 
   closeModal: () => {
     get().cancelDeviceFlow();
-    set({ isModalOpen: false });
+    get().cancelGoogleOAuth();
+    set({ isModalOpen: false, isGoogleLoading: false });
+  },
+
+  setActiveAuthTab: (tab) => {
+    set({ activeAuthTab: tab });
   },
 
   setCustomClientId: async (clientId: string) => {
@@ -101,6 +117,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ customClientId: trimmed });
     const settings = await loadSettings();
     await saveSettings({ ...settings, githubClientId: trimmed });
+  },
+
+  setCustomGoogleClientId: async (clientId: string) => {
+    const trimmed = clientId.trim();
+    set({ customGoogleClientId: trimmed });
+    const settings = await loadSettings();
+    await saveSettings({ ...settings, googleClientId: trimmed });
   },
 
   cancelDeviceFlow: () => {
@@ -111,18 +134,99 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ isPolling: false, deviceFlow: null, isLoading: false });
   },
 
+  cancelGoogleOAuth: () => {
+    if (window.electronAPI?.auth?.cancelGoogleOAuth) {
+      window.electronAPI.auth.cancelGoogleOAuth().catch(() => {});
+    }
+    set({ isGoogleLoading: false });
+  },
+
+  // ==========================================================================
+  // GOOGLE OAUTH FLOW
+  // ==========================================================================
+  startGoogleOAuth: async () => {
+    const { customGoogleClientId } = get();
+    set({ isGoogleLoading: true });
+
+    try {
+      if (!window.electronAPI?.auth?.startGoogleOAuth) {
+        set({ isGoogleLoading: false });
+        useToastStore.getState().showToast(
+          'Google OAuth loopback is native to the desktop app. Run npm run dev in Electron.',
+          'info'
+        );
+        return false;
+      }
+
+      useToastStore.getState().showToast('Opening Google sign-in in your browser...', 'info');
+      sounds.playClick();
+
+      const res = await window.electronAPI.auth.startGoogleOAuth(customGoogleClientId || undefined);
+
+      if (!res.success || !res.profile) {
+        set({ isGoogleLoading: false });
+        useToastStore.getState().showToast(
+          res.error || 'Google sign-in was cancelled or encountered an error',
+          'error'
+        );
+        return false;
+      }
+
+      const profile: AuthUserProfile = {
+        provider: 'google',
+        id: res.profile.id,
+        login: res.profile.login || 'google_user',
+        name: res.profile.name,
+        avatarUrl: res.profile.avatarUrl,
+        email: res.profile.email,
+      };
+
+      // Save token in DPAPI safeStorage
+      if (res.accessToken && window.electronAPI?.store?.setSecureKey) {
+        await window.electronAPI.store.setSecureKey('google_token', res.accessToken);
+      }
+      if (res.accessToken && typeof localStorage !== 'undefined') {
+        localStorage.setItem('fc_auth_token', res.accessToken);
+      }
+
+      // Save profile in IndexedDB
+      const settings = await loadSettings();
+      await saveSettings({ ...settings, authUser: profile });
+
+      set({
+        user: profile,
+        accessToken: res.accessToken || null,
+        isGoogleLoading: false,
+        isModalOpen: false,
+      });
+
+      sounds.playChime();
+      useToastStore.getState().showToast(
+        `Signed in as ${profile.name} via Google!`,
+        'success'
+      );
+      return true;
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Google authentication failed';
+      set({ isGoogleLoading: false });
+      useToastStore.getState().showToast(msg, 'error');
+      return false;
+    }
+  },
+
+  // ==========================================================================
+  // GITHUB OAUTH FLOW
+  // ==========================================================================
   startDeviceFlow: async () => {
     get().cancelDeviceFlow();
-
     set({ isLoading: true });
     const { customClientId } = get();
 
     try {
       if (!window.electronAPI?.auth?.startGithubDeviceFlow) {
-        // Web simulator mode notice
         set({ isLoading: false });
         useToastStore.getState().showToast(
-          'GitHub OAuth Device Flow is native to the desktop app. Enter Personal Access Token below.',
+          'GitHub OAuth Device Flow is native to desktop. Enter token below.',
           'info'
         );
         return;
@@ -133,8 +237,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       if (!res.success || !res.deviceCode || !res.userCode) {
         set({ isLoading: false });
         useToastStore.getState().showToast(
-          res.error || 'Failed to start GitHub authorization flow',
-          'error'
+          res.error || 'To use Device Flow, configure your Client ID or use 1-Click Token below.',
+          'info'
         );
         return;
       }
@@ -156,7 +260,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       sounds.playChime();
 
-      // Begin polling for user approval
+      // Begin polling
       const poll = async () => {
         const state = get();
         if (!state.isPolling || !state.deviceFlow) return;
@@ -173,7 +277,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         );
 
         if (pollRes.success && pollRes.accessToken) {
-          // Authorized!
           get().cancelDeviceFlow();
           await get().loginWithToken(pollRes.accessToken);
           return;
@@ -185,12 +288,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           return;
         }
 
-        // An explicit error occurred
         get().cancelDeviceFlow();
         useToastStore.getState().showToast(pollRes.error || 'GitHub authorization failed', 'error');
       };
 
-      // Initial poll delay
       pollTimer = setTimeout(poll, flowState.interval * 1000);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Error starting GitHub authorization';
@@ -206,17 +307,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ isLoading: true });
 
     try {
-      let profile: GitHubUserProfile | null = null;
+      let profile: AuthUserProfile | null = null;
 
       if (window.electronAPI?.auth?.getGithubProfile) {
         const res = await window.electronAPI.auth.getGithubProfile(cleanToken);
         if (res.success && res.profile) {
-          profile = res.profile;
+          profile = {
+            ...res.profile,
+            provider: 'github',
+          };
         } else {
-          throw new Error(res.error || 'Failed to fetch GitHub user profile');
+          throw new Error(res.error || 'Failed to fetch GitHub profile');
         }
       } else {
-        // Fallback for web simulator: direct browser fetch
         const res = await fetch('https://api.github.com/user', {
           headers: {
             'Authorization': `Bearer ${cleanToken}`,
@@ -226,6 +329,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         if (!res.ok) throw new Error(`GitHub error (${res.status})`);
         const data = await res.json();
         profile = {
+          provider: 'github',
+          id: String(data.id || data.login),
           login: data.login,
           name: data.name || data.login,
           avatarUrl: data.avatar_url,
@@ -236,17 +341,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         };
       }
 
-      // Persist token in DPAPI hardware vault
       if (window.electronAPI?.store?.setSecureKey) {
         await window.electronAPI.store.setSecureKey('github_token', cleanToken);
       }
       if (typeof localStorage !== 'undefined') {
-        localStorage.setItem('fc_github_token', cleanToken);
+        localStorage.setItem('fc_auth_token', cleanToken);
       }
 
-      // Persist profile in IndexedDB
       const settings = await loadSettings();
-      await saveSettings({ ...settings, githubUser: profile });
+      await saveSettings({ ...settings, authUser: profile, githubUser: profile as any });
 
       set({
         user: profile,
@@ -257,7 +360,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       sounds.playChime();
       useToastStore.getState().showToast(
-        `Welcome, @${profile.login}! GitHub account connected.`,
+        `Welcome, @${profile.login}! GitHub connected.`,
         'success'
       );
       return true;
@@ -271,27 +374,29 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   logout: async () => {
     get().cancelDeviceFlow();
+    get().cancelGoogleOAuth();
 
     // Clear DPAPI safeStorage
     if (window.electronAPI?.store?.setSecureKey) {
       await window.electronAPI.store.setSecureKey('github_token', '');
+      await window.electronAPI.store.setSecureKey('google_token', '');
     }
     if (typeof localStorage !== 'undefined') {
-      localStorage.removeItem('fc_github_token');
+      localStorage.removeItem('fc_auth_token');
     }
 
-    // Clear IndexedDB profile
     const settings = await loadSettings();
-    await saveSettings({ ...settings, githubUser: null });
+    await saveSettings({ ...settings, authUser: null, githubUser: null });
 
     set({
       user: null,
       accessToken: null,
       isLoading: false,
+      isGoogleLoading: false,
       isModalOpen: false,
     });
 
     sounds.playClick();
-    useToastStore.getState().showToast('Disconnected from GitHub', 'info');
+    useToastStore.getState().showToast('Disconnected account', 'info');
   },
 }));

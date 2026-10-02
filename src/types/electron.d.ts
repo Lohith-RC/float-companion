@@ -111,22 +111,35 @@ export interface FloatCompanionAPI {
     }>;
     getGithubProfile: (token: string) => Promise<{
       success: boolean;
-      profile?: GitHubUserProfile;
+      profile?: AuthUserProfile;
       error?: string;
     }>;
+    startGoogleOAuth: (clientId?: string) => Promise<{
+      success: boolean;
+      profile?: AuthUserProfile;
+      accessToken?: string;
+      error?: string;
+    }>;
+    cancelGoogleOAuth: () => Promise<{ success: boolean }>;
     openExternal: (url: string) => Promise<{ success: boolean; error?: string }>;
   };
 }
 
-export interface GitHubUserProfile {
-  login: string;
+export type AuthProvider = 'github' | 'google';
+
+export interface AuthUserProfile {
+  provider: AuthProvider;
+  id: string;
+  login?: string;
   name: string;
   avatarUrl: string;
-  htmlUrl: string;
-  bio: string;
-  publicRepos: number;
-  email: string;
+  htmlUrl?: string;
+  bio?: string;
+  publicRepos?: number;
+  email?: string;
 }
+
+export type GitHubUserProfile = AuthUserProfile;
 
 declare global {
   interface Window {

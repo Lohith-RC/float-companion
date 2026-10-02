@@ -137,11 +137,12 @@ Modern computer workflows are **deeply fragmented**, forcing you into constant c
 * Zero `any` types across the entire TypeScript codebase.
 * Strict modular architecture ensuring all components remain **under 400 lines of code**.
 
-### 9. 🐙 Free Native GitHub OAuth & Developer Profile (RFC 8628)
-* **100% Free Forever:** Built on official GitHub OAuth 2.0 Device Authorization Grant—no backend servers, external proxies, or subscriptions required.
-* **1-Click Seamless Login:** Generates a secure one-time verification code, opens GitHub in your browser, and auto-detects approval in the background.
-* **Personalized Experience:** Displays your verified GitHub avatar, `@handle`, public repository count, and bio in the Tray Header and onboarding view.
-* **DPAPI Vault Security:** OAuth bearer tokens are protected with Windows Data Protection API (DPAPI) hardware encryption. Also supports direct Personal Access Tokens (PAT).
+### 9. 🔑 Dual Free OAuth: Google & GitHub Identity
+* **100% Free Forever:** Zero cloud servers, subscriptions, or proxies. Both providers run natively inside Electron's secure main process.
+* **Google OAuth 2.0 (RFC 8252 Loopback with PKCE):** 1-Click "Sign in with Google". Spins up an ephemeral local loopback server (`127.0.0.1`), handles authorization in your system browser, and verifies identity via Google's userinfo endpoints with zero client secret exposure.
+* **GitHub Device Flow (RFC 8628 & PAT):** Native device code grant with 1-click clipboard copy and pre-filled token generation link.
+* **Unified Ambient Identity:** Verified user avatar and badge (`G` or `GH`) in the Tray Header, personalized greetings in the chat pane, and dedicated Connected Accounts settings card.
+* **Hardware-Encrypted DPAPI Vault:** Access tokens are stored using Windows Data Protection API (DPAPI) hardware encryption.
 
 ---
 

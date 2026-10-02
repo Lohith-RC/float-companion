@@ -24,8 +24,17 @@ export const SettingsView: FC<SettingsViewProps> = ({ settings, onUpdate, onClos
   const [newKeyword, setNewKeyword] = useState('');
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [confirmPurge, setConfirmPurge] = useState(false);
-  const { user, openModal, logout, customClientId, setCustomClientId } = useAuthStore();
+  const {
+    user,
+    openModal,
+    logout,
+    customClientId,
+    setCustomClientId,
+    customGoogleClientId,
+    setCustomGoogleClientId,
+  } = useAuthStore();
   const [clientIdDraft, setClientIdDraft] = useState(customClientId);
+  const [googleClientIdDraft, setGoogleClientIdDraft] = useState(customGoogleClientId);
   const [showAdvancedAuth, setShowAdvancedAuth] = useState(false);
 
   // Hydrate credentials from Windows DPAPI hardware vault if available
@@ -215,16 +224,12 @@ export const SettingsView: FC<SettingsViewProps> = ({ settings, onUpdate, onClos
           </div>
         </div>
 
-        {/* GitHub OAuth Identity Section */}
+        {/* Multi-Provider OAuth Identity Section */}
         <div className="p-3 bg-slate-900/60 rounded-xl border border-white/10 space-y-3 shadow-inner">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center">
-                <svg className="w-3.5 h-3.5 fill-white" viewBox="0 0 24 24" aria-hidden="true">
-                  <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
-                </svg>
-              </div>
-              <span className="text-slate-200 font-semibold text-xs">GitHub Account & Identity</span>
+              <span className="text-sm">🔑</span>
+              <span className="text-slate-200 font-semibold text-xs">Connected Accounts & OAuth</span>
             </div>
             <span className="text-[9px] text-emerald-400 font-tabular px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20">
               100% Free OAuth
@@ -235,17 +240,24 @@ export const SettingsView: FC<SettingsViewProps> = ({ settings, onUpdate, onClos
             <div className="p-2.5 rounded-lg bg-slate-950/70 border border-white/5 space-y-2">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                  <img
-                    src={user.avatarUrl}
-                    alt={user.login}
-                    className="w-8 h-8 rounded-full border border-sky-400/50 object-cover"
-                  />
+                  <div className="relative">
+                    <img
+                      src={user.avatarUrl}
+                      alt={user.name || user.login || 'User'}
+                      className="w-9 h-9 rounded-full border border-sky-400/50 object-cover"
+                    />
+                    <span
+                      className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full border border-slate-900 ${
+                        user.provider === 'google' ? 'bg-sky-400' : 'bg-emerald-400'
+                      }`}
+                    />
+                  </div>
                   <div>
                     <span className="text-xs font-bold text-white block leading-tight">
                       {user.name || user.login}
                     </span>
                     <span className="text-[10px] text-slate-400 font-mono">
-                      @{user.login}
+                      {user.provider === 'google' ? user.email : `@${user.login}`}
                     </span>
                   </div>
                 </div>
@@ -253,7 +265,7 @@ export const SettingsView: FC<SettingsViewProps> = ({ settings, onUpdate, onClos
                   type="button"
                   onClick={logout}
                   className="px-2 py-1 text-[10px] rounded-md text-red-400 hover:text-red-300 hover:bg-red-500/10 border border-red-500/20 flex items-center gap-1 transition-colors"
-                  title="Disconnect GitHub account"
+                  title="Disconnect account"
                 >
                   <LogOut className="w-3 h-3" />
                   <span>Sign Out</span>
@@ -267,65 +279,136 @@ export const SettingsView: FC<SettingsViewProps> = ({ settings, onUpdate, onClos
               )}
 
               <div className="flex items-center justify-between pt-1 border-t border-white/5 text-[10px] text-slate-400">
-                <span>📦 {user.publicRepos} Public Repos</span>
-                <a
-                  href={user.htmlUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-sky-400 hover:underline flex items-center gap-1 font-medium"
-                >
-                  <span>View GitHub Profile</span>
-                  <ExternalLink className="w-2.5 h-2.5" />
-                </a>
+                <span className="flex items-center gap-1">
+                  {user.provider === 'google' ? (
+                    <>
+                      <span className="text-sky-400">✓</span>
+                      <span>Google Identity Verified</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>📦 {user.publicRepos || 0} Public Repos</span>
+                    </>
+                  )}
+                </span>
+                {user.htmlUrl && (
+                  <a
+                    href={user.htmlUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-sky-400 hover:underline flex items-center gap-1 font-medium"
+                  >
+                    <span>View Profile</span>
+                    <ExternalLink className="w-2.5 h-2.5" />
+                  </a>
+                )}
               </div>
             </div>
           ) : (
             <div className="space-y-2">
               <p className="text-[10px] text-slate-400 leading-relaxed">
-                Link your GitHub profile for free with native 1-click device authorization. Adds your avatar, username, and personalized greeting.
+                Connect your account for free to personalize your assistant avatar, name, and badge.
               </p>
-              <button
-                type="button"
-                onClick={openModal}
-                className="w-full py-2 px-3 rounded-lg bg-gradient-to-r from-slate-800 to-slate-700 hover:from-slate-700 hover:to-slate-600 border border-white/10 text-white font-medium text-xs flex items-center justify-center gap-2 transition-all active:scale-[0.99] shadow-sm"
-              >
-                <svg className="w-4 h-4 fill-white" viewBox="0 0 24 24" aria-hidden="true">
-                  <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
-                </svg>
-                <span>Sign in with GitHub (Device Flow)</span>
-              </button>
 
+              {/* Login Buttons Grid */}
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => openModal('google')}
+                  className="py-2 px-3 rounded-lg bg-white hover:bg-slate-100 text-slate-900 font-semibold text-xs flex items-center justify-center gap-2 transition-all active:scale-[0.99] shadow-sm"
+                >
+                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24">
+                    <path
+                      fill="#4285F4"
+                      d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"
+                    />
+                    <path
+                      fill="#34A853"
+                      d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"
+                    />
+                    <path
+                      fill="#FBBC05"
+                      d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.99 0 12s.45 3.82 1.25 5.42l4.03-3.15z"
+                    />
+                    <path
+                      fill="#EA4335"
+                      d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
+                    />
+                  </svg>
+                  <span>Google Sign In</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => openModal('github')}
+                  className="py-2 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 border border-white/10 text-white font-medium text-xs flex items-center justify-center gap-2 transition-all active:scale-[0.99] shadow-sm"
+                >
+                  <svg className="w-3.5 h-3.5 fill-white" viewBox="0 0 24 24" aria-hidden="true">
+                    <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
+                  </svg>
+                  <span>GitHub Sign In</span>
+                </button>
+              </div>
+
+              {/* Advanced OAuth Custom Client IDs Accordion */}
               <div className="pt-1">
                 <button
                   type="button"
                   onClick={() => setShowAdvancedAuth(!showAdvancedAuth)}
                   className="text-[10px] text-slate-500 hover:text-slate-300 transition-colors"
                 >
-                  {showAdvancedAuth ? '▾ Hide Advanced OAuth Client ID' : '▸ Custom OAuth Client ID (Optional)'}
+                  {showAdvancedAuth ? '▾ Hide Advanced OAuth Credentials' : '▸ Custom OAuth Client IDs (Optional)'}
                 </button>
                 {showAdvancedAuth && (
-                  <div className="mt-1.5 p-2 rounded-lg bg-slate-950/80 border border-white/5 space-y-1">
-                    <label className="text-[10px] text-slate-400 block font-medium">
-                      Custom GitHub OAuth App Client ID
-                    </label>
-                    <div className="flex gap-1.5">
-                      <input
-                        type="text"
-                        value={clientIdDraft}
-                        onChange={(e) => setClientIdDraft(e.target.value)}
-                        placeholder="Ov23li..."
-                        className="flex-1 px-2 py-1 text-[10px] bg-slate-900 border border-white/10 rounded text-slate-200 font-mono focus:outline-none focus:border-sky-400"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setCustomClientId(clientIdDraft);
-                          useToastStore.getState().showToast('Client ID saved', 'success');
-                        }}
-                        className="px-2 py-1 text-[10px] bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 rounded border border-sky-400/30 font-medium"
-                      >
-                        Apply
-                      </button>
+                  <div className="mt-1.5 p-2 rounded-lg bg-slate-950/80 border border-white/5 space-y-2">
+                    <div>
+                      <label className="text-[10px] text-slate-400 block font-medium mb-0.5">
+                        Google Cloud Client ID (Desktop Application)
+                      </label>
+                      <div className="flex gap-1.5">
+                        <input
+                          type="text"
+                          value={googleClientIdDraft}
+                          onChange={(e) => setGoogleClientIdDraft(e.target.value)}
+                          placeholder="xxxxx.apps.googleusercontent.com"
+                          className="flex-1 px-2 py-1 text-[10px] bg-slate-900 border border-white/10 rounded text-slate-200 font-mono focus:outline-none focus:border-sky-400"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCustomGoogleClientId(googleClientIdDraft);
+                            useToastStore.getState().showToast('Google Client ID saved', 'success');
+                          }}
+                          className="px-2 py-1 text-[10px] bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 rounded border border-sky-400/30 font-medium"
+                        >
+                          Apply
+                        </button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] text-slate-400 block font-medium mb-0.5">
+                        GitHub OAuth App Client ID
+                      </label>
+                      <div className="flex gap-1.5">
+                        <input
+                          type="text"
+                          value={clientIdDraft}
+                          onChange={(e) => setClientIdDraft(e.target.value)}
+                          placeholder="Ov23li..."
+                          className="flex-1 px-2 py-1 text-[10px] bg-slate-900 border border-white/10 rounded text-slate-200 font-mono focus:outline-none focus:border-sky-400"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCustomClientId(clientIdDraft);
+                            useToastStore.getState().showToast('GitHub Client ID saved', 'success');
+                          }}
+                          className="px-2 py-1 text-[10px] bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 rounded border border-sky-400/30 font-medium"
+                        >
+                          Apply
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}
