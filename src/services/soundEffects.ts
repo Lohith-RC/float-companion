@@ -14,12 +14,14 @@ class SoundEngine {
   constructor() {
     if (typeof window !== 'undefined') {
       const unlockAudio = () => {
-        if (this.ctx && this.ctx.state === 'suspended') {
-          this.ctx.resume().catch(() => {});
+        const ctx = this.getContext();
+        if (ctx && ctx.state === 'running') {
+          window.removeEventListener('click', unlockAudio);
+          window.removeEventListener('keydown', unlockAudio);
         }
       };
-      window.addEventListener('click', unlockAudio, { once: true, passive: true });
-      window.addEventListener('keydown', unlockAudio, { once: true, passive: true });
+      window.addEventListener('click', unlockAudio, { passive: true });
+      window.addEventListener('keydown', unlockAudio, { passive: true });
     }
   }
 

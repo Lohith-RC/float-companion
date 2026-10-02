@@ -52,6 +52,34 @@ function registerSystemHandlers(getMainWindow) {
       } catch {
         // Safe fallback
       }
+    } else if (process.platform !== 'win32' && (!cachedStorageInfo || Date.now() - lastStorageQueryTime > 25000)) {
+      try {
+        const stdout = await new Promise((res) => {
+          exec('df -k /', { timeout: 2000 }, (_err, out) => res(out));
+        });
+        if (stdout) {
+          const lines = stdout.trim().split('\n');
+          if (lines.length > 1) {
+            const parts = lines[1].split(/\s+/);
+            const totalKB = parseInt(parts[1], 10);
+            const freeKB = parseInt(parts[3], 10);
+            if (!isNaN(totalKB) && !isNaN(freeKB)) {
+              const totalGB = Math.round(totalKB / (1024 ** 2));
+              const freeGB = Math.round(freeKB / (1024 ** 2));
+              storageInfo = [{
+                drive: '/',
+                totalGB,
+                freeGB,
+                usedGB: Math.max(0, totalGB - freeGB),
+              }];
+              cachedStorageInfo = storageInfo;
+              lastStorageQueryTime = Date.now();
+            }
+          }
+        }
+      } catch {
+        // Safe fallback
+      }
     }
 
     return {
@@ -136,12 +164,18 @@ function registerSystemHandlers(getMainWindow) {
     });
   });
 
-  // 3. Background Typing Channel
+  // 3. Background Typing Channel with Clipboard Preservation
   ipcMain.handle('os:type-text', async (_event, payload) => {
     const val = validateTypeTextPayload(payload || {});
     if (!val.valid) return { success: false, error: val.error };
 
     const { text, delayMs = 150 } = payload;
+    let previousClipboard = '';
+    try {
+      previousClipboard = clipboard.readText();
+    } catch {
+      // Non-fatal
+    }
     clipboard.writeText(text);
 
     const win = getMainWindow();
@@ -150,29 +184,39 @@ function registerSystemHandlers(getMainWindow) {
       setTimeout(() => {
         exec(`powershell -NoProfile -Command "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SendKeys]::SendWait('^v')"`, (err) => {
           if (err) console.warn('SendKeys warning:', err.message);
+          setTimeout(() => {
+            try { clipboard.writeText(previousClipboard); } catch {}
+          }, 600);
         });
       }, Math.max(50, Math.min(delayMs, 5000)));
+    } else {
+      setTimeout(() => {
+        try { clipboard.writeText(previousClipboard); } catch {}
+      }, 1500);
     }
 
     return { success: true };
   });
 
-  // 4. Desktop Multimodal Capture Channel
+  // 4. Desktop Multimodal Capture Channel (Targeted to Active Display)
   ipcMain.handle('os:capture-screen', async () => {
     try {
-      const primaryDisplay = screen.getPrimaryDisplay();
+      const win = getMainWindow();
+      const targetDisplay = win ? screen.getDisplayMatching(win.getBounds()) : screen.getPrimaryDisplay();
       const sources = await desktopCapturer.getSources({
         types: ['screen'],
         thumbnailSize: {
-          width: Math.min(primaryDisplay.size.width || 1920, 1920),
-          height: Math.min(primaryDisplay.size.height || 1080, 1080),
+          width: Math.min(targetDisplay.size.width || 1920, 1920),
+          height: Math.min(targetDisplay.size.height || 1080, 1080),
         },
       });
 
       if (sources && sources.length > 0) {
-        const image = sources[0].thumbnail;
-        const dataUrl = image.toDataURL();
+        // Select source matching active monitor, fallback to primary
+        const matchedSource = sources.find((s) => s.display_id === targetDisplay.id.toString()) || sources[0];
+        const image = matchedSource.thumbnail;
         const base64Data = image.toJPEG(85).toString('base64');
+        const dataUrl = `data:image/jpeg;base64,${base64Data}`;
         return {
           success: true,
           dataUrl,
@@ -264,6 +308,11 @@ while ($true) {
           const proc = (parts[1] || '').trim();
           const lowerTitle = title.toLowerCase();
           const lowerProc = proc.toLowerCase();
+
+          // Self-Interference Shield: Ignore FloatCompanion's own windows so alerts do not clear on click
+          if (lowerProc === 'electron' || lowerTitle.includes('floatcompanion')) {
+            continue;
+          }
 
           let matchedKeyword = null;
           for (const kw of blacklistedKeywords) {

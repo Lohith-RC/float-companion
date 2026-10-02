@@ -202,10 +202,15 @@ export class AIOrchestrator {
     // Build normalized alternating turns for Gemini
     const contents: Array<{ role: 'user' | 'model'; parts: Array<Record<string, unknown>> }> = [];
 
-    conversationMessages.forEach((m, index) => {
-      const isLast = index === conversationMessages.length - 1;
+    // Strip leading assistant/model turns so conversation strictly begins with a user turn
+    let startIndex = conversationMessages.findIndex((m) => m.role === 'user');
+    if (startIndex === -1) startIndex = 0;
+    const sanitizedMessages = conversationMessages.slice(startIndex);
+
+    sanitizedMessages.forEach((m, index) => {
+      const isLast = index === sanitizedMessages.length - 1;
       const role: 'user' | 'model' = m.role === 'assistant' ? 'model' : 'user';
-      const parts: Array<Record<string, unknown>> = [{ text: m.content || ' ' }];
+      const parts: Array<Record<string, unknown>> = [{ text: m.content?.trim() || ' ' }];
 
       if (isLast && imageAttachment) {
         parts.unshift({
@@ -223,6 +228,11 @@ export class AIOrchestrator {
         contents.push({ role, parts });
       }
     });
+
+    // Invariant: Gemini API strictly requires that the first turn has role 'user'
+    while (contents.length > 0 && contents[0].role === 'model') {
+      contents.shift();
+    }
 
     const requestBody: Record<string, unknown> = { contents };
     if (systemMsg?.content?.trim()) {

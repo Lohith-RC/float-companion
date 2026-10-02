@@ -13,6 +13,9 @@ interface SettingsViewProps {
 export const SettingsView: FC<SettingsViewProps> = ({ settings, onUpdate, onClose }) => {
   const [groqKey, setGroqKey] = useState(settings.groqKey || '');
   const [geminiKey, setGeminiKey] = useState(settings.geminiKey || '');
+  const [defaultModel, setDefaultModel] = useState<'groq' | 'gemini' | 'ollama'>(
+    settings.defaultModel === 'openai' ? 'groq' : settings.defaultModel || 'groq'
+  );
   const [showGroq, setShowGroq] = useState(false);
   const [showGemini, setShowGemini] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(settings.soundEnabled ?? true);
@@ -40,6 +43,7 @@ export const SettingsView: FC<SettingsViewProps> = ({ settings, onUpdate, onClos
       ...settings,
       groqKey: cleanGroq,
       geminiKey: cleanGemini,
+      defaultModel,
       soundEnabled,
       distractionBlacklist: blacklist,
     };
@@ -173,6 +177,36 @@ export const SettingsView: FC<SettingsViewProps> = ({ settings, onUpdate, onClos
               >
                 {showGemini ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
               </button>
+            </div>
+          </div>
+
+          {/* Active Model Engine Priority */}
+          <div className="space-y-1.5 pt-2 border-t border-white/10">
+            <label className="text-[11px] text-slate-300 font-medium block">Default Engine Priority</label>
+            <div className="grid grid-cols-3 gap-1.5 bg-slate-950/80 p-1 rounded-lg border border-white/10" role="radiogroup" aria-label="Default AI Engine Priority">
+              {[
+                { id: 'groq', label: '⚡ Groq (Fast)' },
+                { id: 'gemini', label: '✨ Gemini 2.5' },
+                { id: 'ollama', label: '🦙 Ollama (Local)' },
+              ].map((m) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={defaultModel === m.id}
+                  onClick={() => {
+                    setDefaultModel(m.id as 'groq' | 'gemini' | 'ollama');
+                    sounds.playClick();
+                  }}
+                  className={`py-1 px-1 text-[10px] rounded-md font-medium transition-all text-center ${
+                    defaultModel === m.id
+                      ? 'bg-sky-500/25 text-sky-300 border border-sky-400/40 shadow-sm'
+                      : 'text-slate-400 hover:text-white border border-transparent'
+                  }`}
+                >
+                  {m.label}
+                </button>
+              ))}
             </div>
           </div>
         </div>

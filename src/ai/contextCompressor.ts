@@ -11,11 +11,14 @@ export function prepareOptimizedContext(
 ): PromptMessage[] {
   const result: PromptMessage[] = [{ role: 'system', content: systemPrompt }];
 
+  // Exclude ephemeral zero-token local telemetry turns to conserve LLM context window
+  const conversationalMessages = messages.filter((m) => !m.isZeroToken);
+
   // Retain the last 6 turns in full
-  const recentTurns = messages.slice(-6);
+  const recentTurns = conversationalMessages.slice(-6);
 
   // Compress older turns
-  const olderTurns = messages.slice(0, -6).map((msg) => {
+  const olderTurns = conversationalMessages.slice(0, -6).map((msg) => {
     let content = msg.content;
     if (content.length > 250) {
       content = content.substring(0, 180) + '... [summarized for context]';

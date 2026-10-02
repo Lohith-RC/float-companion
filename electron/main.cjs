@@ -99,19 +99,19 @@ function createMainWindow() {
 
 function expandToTray() {
   if (!mainWindow) return;
-  const primaryDisplay = screen.getPrimaryDisplay();
-  const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
-
   const currentBounds = mainWindow.getBounds();
   lastOrbPosition = { x: currentBounds.x, y: currentBounds.y };
+
+  const targetDisplay = screen.getDisplayMatching(currentBounds);
+  const { x: dx, y: dy, width: dw, height: dh } = targetDisplay.workArea;
 
   let newX = currentBounds.x + currentBounds.width - TRAY_SIZE.width;
   let newY = currentBounds.y + currentBounds.height - TRAY_SIZE.height;
 
-  if (newX < 10) newX = 10;
-  if (newX + TRAY_SIZE.width > screenWidth) newX = screenWidth - TRAY_SIZE.width - 10;
-  if (newY < 10) newY = 10;
-  if (newY + TRAY_SIZE.height > screenHeight) newY = screenHeight - TRAY_SIZE.height - 10;
+  if (newX < dx + 10) newX = dx + 10;
+  if (newX + TRAY_SIZE.width > dx + dw - 10) newX = dx + dw - TRAY_SIZE.width - 10;
+  if (newY < dy + 10) newY = dy + 10;
+  if (newY + TRAY_SIZE.height > dy + dh - 10) newY = dy + dh - TRAY_SIZE.height - 10;
 
   mainWindow.setBounds({
     x: Math.round(newX),
@@ -230,10 +230,10 @@ ipcMain.handle('window:resize', (_event, payload) => {
   const { mode, width } = payload || {};
 
   if (width && width > 800) {
-    // Fullscreen screen canvas mode
-    const primaryDisplay = screen.getPrimaryDisplay();
-    const { width: sw, height: sh } = primaryDisplay.workAreaSize;
-    mainWindow.setBounds({ x: 0, y: 0, width: sw, height: sh });
+    // Fullscreen screen canvas mode on active display
+    const targetDisplay = screen.getDisplayMatching(mainWindow.getBounds());
+    const { x: dx, y: dy, width: dw, height: dh } = targetDisplay.bounds;
+    mainWindow.setBounds({ x: dx, y: dy, width: dw, height: dh });
     currentMode = 'canvas';
   } else if (mode === 'tray') {
     expandToTray();

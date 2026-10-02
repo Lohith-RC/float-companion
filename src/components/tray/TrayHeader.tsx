@@ -19,11 +19,22 @@ export const TrayHeader: FC<TrayHeaderProps> = ({
   onOpenSettings,
   onCollapse,
 }) => {
-  const activeEngineLabel = userSettings?.groqKey
-    ? '⚡ Groq Llama-3.3'
-    : userSettings?.geminiKey
-    ? '✨ Gemini 2.5 Flash'
-    : '⚡ 0-Token Native';
+  const activeEngineLabel = (() => {
+    const pref = userSettings?.defaultModel || 'groq';
+    if (pref === 'gemini' && userSettings?.geminiKey) {
+      return '✨ Gemini 2.5 Flash';
+    }
+    if (pref === 'ollama') {
+      return '🦙 Ollama Local';
+    }
+    if (userSettings?.groqKey) {
+      return '⚡ Groq Llama-3.3';
+    }
+    if (userSettings?.geminiKey) {
+      return '✨ Gemini 2.5 Flash';
+    }
+    return '⚡ 0-Token Native';
+  })();
 
   return (
     <header className="h-14 px-4 flex items-center justify-between border-b border-white/[0.08] bg-slate-950/80 backdrop-blur-xl drag-region">

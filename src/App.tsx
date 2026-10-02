@@ -51,6 +51,13 @@ export default function App() {
           });
           window.electronAPI?.focus?.stop?.();
           useToastStore.getState().showToast('🎉 Focus Sprint Completed!', 'success');
+          try {
+            if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+              new Notification('FloatCompanion', { body: '🎉 Focus Sprint Completed!' });
+            }
+          } catch {
+            // Non-fatal
+          }
         }
       }, 1000);
     }
@@ -170,7 +177,7 @@ export default function App() {
           <ExpandedTray onCollapse={handleCollapse} onOpenCanvas={handleOpenCanvas} />
         )}
 
-        <ToastContainer />
+        {mode === 'tray' && <ToastContainer />}
       </main>
     </ErrorBoundary>
   );

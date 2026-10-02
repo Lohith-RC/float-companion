@@ -26,17 +26,47 @@ export const ScreenCanvas: FC<ScreenCanvasProps> = ({ onClose }) => {
         return;
       }
       try {
-        const prevData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-        ctx.putImageData(prevData, 0, 0);
+        const offscreen = document.createElement('canvas');
+        offscreen.width = canvas.width;
+        offscreen.height = canvas.height;
+        const offCtx = offscreen.getContext('2d');
+        if (offCtx) {
+          offCtx.drawImage(canvas, 0, 0);
+          canvas.width = window.innerWidth;
+          canvas.height = window.innerHeight;
+          ctx.drawImage(offscreen, 0, 0, canvas.width, canvas.height);
+        } else {
+          canvas.width = window.innerWidth;
+          canvas.height = window.innerHeight;
+        }
       } catch {
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
       }
     };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const k = e.key.toLowerCase();
+      if (k === 'p') {
+        setTool('pen');
+        sounds.playClick();
+      } else if (k === 'h') {
+        setTool('highlighter');
+        sounds.playClick();
+      } else if (k === 'e') {
+        setTool('eraser');
+        sounds.playClick();
+      } else if (e.key === 'Delete' || e.key === 'Backspace') {
+        clearCanvas();
+      }
+    };
+
     window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
   }, []);
 
   const startDrawing = (e: React.PointerEvent<HTMLCanvasElement>) => {
@@ -57,24 +87,29 @@ export const ScreenCanvas: FC<ScreenCanvasProps> = ({ onClose }) => {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    if (tool === 'eraser') {
-      ctx.globalCompositeOperation = 'destination-out';
-      ctx.lineWidth = 24;
-      ctx.lineCap = 'round';
-    } else if (tool === 'highlighter') {
-      ctx.globalCompositeOperation = 'source-over';
-      ctx.strokeStyle = color + '55'; // translucent
-      ctx.lineWidth = 18;
-      ctx.lineCap = 'square';
-    } else {
-      ctx.globalCompositeOperation = 'source-over';
-      ctx.strokeStyle = color;
-      ctx.lineWidth = 3.5;
-      ctx.lineCap = 'round';
-    }
+    const clientX = e.clientX;
+    const clientY = e.clientY;
 
-    ctx.lineTo(e.clientX, e.clientY);
-    ctx.stroke();
+    requestAnimationFrame(() => {
+      if (tool === 'eraser') {
+        ctx.globalCompositeOperation = 'destination-out';
+        ctx.lineWidth = 24;
+        ctx.lineCap = 'round';
+      } else if (tool === 'highlighter') {
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.strokeStyle = color + '55'; // translucent
+        ctx.lineWidth = 18;
+        ctx.lineCap = 'square';
+      } else {
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 3.5;
+        ctx.lineCap = 'round';
+      }
+
+      ctx.lineTo(clientX, clientY);
+      ctx.stroke();
+    });
   };
 
   const stopDrawing = () => {

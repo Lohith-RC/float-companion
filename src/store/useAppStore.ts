@@ -79,18 +79,20 @@ export const useAppStore = create<AppState>((set, get) => ({
       ],
     })),
   clearMessages: () => set({ messages: [] }),
-  addTask: (title, durationMins = 25) =>
+  addTask: (title, durationMins = 25) => {
+    const clampedDuration = Math.min(240, Math.max(5, Number(durationMins) || 25));
     set((state) => ({
       tasks: [
         ...state.tasks,
         {
           id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
-          title,
+          title: title.trim().slice(0, 120),
           completed: false,
-          durationMins,
+          durationMins: clampedDuration,
         },
       ],
-    })),
+    }));
+  },
   toggleTask: (id) =>
     set((state) => ({
       tasks: state.tasks.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t)),
