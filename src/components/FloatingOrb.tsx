@@ -1,6 +1,7 @@
-import { FC } from 'react';
-import { Sparkles, Brain, AlertTriangle } from 'lucide-react';
+import { FC, useState } from 'react';
+import { Sparkles, Brain, AlertTriangle, EyeOff } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
+import { sounds } from '../services/soundEffects';
 
 interface FloatingOrbProps {
   onExpand: () => void;
@@ -8,12 +9,24 @@ interface FloatingOrbProps {
 
 export const FloatingOrb: FC<FloatingOrbProps> = ({ onExpand }) => {
   const { isFocusing, distractionAlert } = useAppStore();
+  const [isGhost, setIsGhost] = useState(false);
   const isDistracted = Boolean(distractionAlert?.active);
+
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const nextGhost = !isGhost;
+    setIsGhost(nextGhost);
+    sounds.playClick();
+    if (window.electronAPI?.window?.setIgnoreMouse) {
+      window.electronAPI.window.setIgnoreMouse(nextGhost, true);
+    }
+  };
 
   return (
     <button
       type="button"
       onClick={onExpand}
+      onContextMenu={handleContextMenu}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
@@ -22,9 +35,11 @@ export const FloatingOrb: FC<FloatingOrbProps> = ({ onExpand }) => {
       }}
       aria-label={`FloatCompanion Orb: ${
         isDistracted ? 'Distraction Alert Active' : isFocusing ? 'Focus Sprint In Progress' : 'Ready'
-      }. Press Enter or Space to open tray.`}
-      className="w-full h-full flex items-center justify-center cursor-pointer select-none group drag-region relative bg-transparent border-0 p-0 m-0 outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 rounded-full"
-      title="FloatCompanion (Ctrl + Shift + Space)"
+      }. Press Enter or Space to open tray. Right-click to toggle Ghost Lens.`}
+      className={`w-full h-full flex items-center justify-center cursor-pointer select-none group drag-region relative bg-transparent border-0 p-0 m-0 outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 rounded-full transition-opacity duration-300 ${
+        isGhost ? 'opacity-25 hover:opacity-90' : 'opacity-100'
+      }`}
+      title="FloatCompanion (Left-Click: Open | Right-Click: Ghost Lens | Ctrl+Shift+Space)"
     >
       <div className="relative w-[66px] h-[66px] flex items-center justify-center">
         {/* Sonar Acoustic Pulse Wave (Expanding Ambient Halo) */}
@@ -81,7 +96,9 @@ export const FloatingOrb: FC<FloatingOrbProps> = ({ onExpand }) => {
             <div className="absolute bottom-1 left-3 right-3 h-[1px] bg-gradient-to-r from-transparent via-sky-400/40 to-transparent rounded-full pointer-events-none" />
 
             {/* Dynamic Center Glyphs */}
-            {isDistracted ? (
+            {isGhost ? (
+              <EyeOff className="w-5 h-5 text-indigo-300 drop-shadow-[0_0_8px_rgba(99,102,241,0.8)]" />
+            ) : isDistracted ? (
               <AlertTriangle className="w-5 h-5 text-red-400 animate-bounce drop-shadow-[0_0_8px_rgba(239,68,68,0.8)]" />
             ) : isFocusing ? (
               <Brain className="w-5 h-5 text-amber-300 animate-pulse drop-shadow-[0_0_10px_rgba(245,158,11,0.7)]" />

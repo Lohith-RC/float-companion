@@ -314,6 +314,24 @@ while ($true) {
             continue;
           }
 
+          // ponytail: substring educational whitelist; LLM/NLP intent classifier if title semantics become ambiguous
+          const isEducational =
+            lowerTitle.includes('tutorial') ||
+            lowerTitle.includes('course') ||
+            lowerTitle.includes('study') ||
+            lowerTitle.includes('lofi') ||
+            lowerTitle.includes('documentation') ||
+            lowerTitle.includes('lecture') ||
+            lowerTitle.includes('learn');
+
+          if (isEducational) {
+            if (isCurrentlyDistracted) {
+              isCurrentlyDistracted = false;
+              win.webContents.send('focus:distraction-cleared');
+            }
+            continue;
+          }
+
           let matchedKeyword = null;
           for (const kw of blacklistedKeywords) {
             const lowerKw = kw.toLowerCase();
