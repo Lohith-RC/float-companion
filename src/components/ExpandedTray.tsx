@@ -108,8 +108,6 @@ export const ExpandedTray: FC<ExpandedTrayProps> = ({ onCollapse, onOpenCanvas }
     }
   }, [activeTab]);
 
-
-
   const handleCaptureScreen = async () => {
     if (window.electronAPI?.os?.captureScreen) {
       sounds.playClick();

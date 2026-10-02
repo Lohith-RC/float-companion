@@ -51,9 +51,11 @@ export const TrayTabsNav: FC<TrayTabsNavProps> = ({
         >
           <CheckSquare className="w-3.5 h-3.5" aria-hidden="true" />
           <span>Tasks</span>
-          <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-800 text-slate-300 font-tabular font-bold">
-            {uncompletedTaskCount}
-          </span>
+          {uncompletedTaskCount > 0 && (
+            <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-800 text-slate-300 font-tabular font-bold">
+              {uncompletedTaskCount}
+            </span>
+          )}
         </button>
 
         <button

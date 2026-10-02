@@ -5,7 +5,7 @@
 
 > *A persistent, lightweight desktop copilot inspired by FloatGPT and Raycast. FloatCompanion hovers seamlessly over your IDE, terminal, and browser — offering sub-300ms neural streaming, 1-click desktop screen vision, hands-free voice dictation, zero-token local OS control, hardware-encrypted credential vaults, and proactive distraction shielding.*
 
-[![Release](https://img.shields.io/badge/Release-v1.0.0-38bdf8?style=for-the-badge&logo=github)](https://github.com/Lohith-RC/float-companion/releases)
+[![Release](https://img.shields.io/github/v/release/Lohith-RC/float-companion?style=for-the-badge&logo=github&color=38bdf8&defaultLabel=v1.0.0)](https://github.com/Lohith-RC/float-companion/releases)
 [![Electron](https://img.shields.io/badge/Electron-34.2.0-475569?style=for-the-badge&logo=electron)](https://www.electronjs.org/)
 [![React](https://img.shields.io/badge/React-19.0.0-61dafb?style=for-the-badge&logo=react)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7_Strict-3178c6?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)

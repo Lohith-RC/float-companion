@@ -1,5 +1,5 @@
 import { FC, RefObject } from 'react';
-import { Copy, Check, Terminal, Zap, RotateCw } from 'lucide-react';
+import { Copy, Check, Terminal, Zap, RotateCw, Sparkles, Keyboard, Lightbulb } from 'lucide-react';
 import { ChatMessage } from '../../store/useAppStore';
 
 interface ChatTabProps {
@@ -89,6 +89,44 @@ function renderFormattedContent(rawText: string) {
 }
 
 /**
+ * WelcomeCard — Branded onboarding card shown when chat is empty.
+ */
+const WelcomeCard: FC = () => (
+  <div className="flex flex-col items-center text-center px-4 py-6 space-y-4 animate-fade-in">
+    <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-sky-500/25 via-indigo-500/20 to-teal-400/20 border border-sky-400/40 flex items-center justify-center shadow-[0_0_20px_rgba(56,189,248,0.2)]">
+      <Sparkles className="w-6 h-6 text-sky-300" />
+    </div>
+    <div>
+      <h2 className="text-sm font-bold text-white mb-0.5">FloatCompanion</h2>
+      <p className="text-[11px] text-slate-400 max-w-[260px] leading-relaxed">
+        Your ambient AI copilot. Ask anything, snap your screen, or use zero-token commands below.
+      </p>
+    </div>
+    <div className="grid grid-cols-2 gap-2 w-full max-w-[280px]">
+      <div className="p-2 bg-slate-900/70 rounded-xl border border-white/[0.08] text-left">
+        <div className="flex items-center gap-1.5 mb-1">
+          <Lightbulb className="w-3 h-3 text-amber-400" />
+          <span className="text-[10px] font-semibold text-slate-300">Quick Commands</span>
+        </div>
+        <p className="text-[9px] text-slate-500 leading-relaxed font-tabular">
+          <code className="text-sky-400">ram</code> · <code className="text-sky-400">time</code> · <code className="text-sky-400">open vscode</code> · <code className="text-sky-400">help</code>
+        </p>
+      </div>
+      <div className="p-2 bg-slate-900/70 rounded-xl border border-white/[0.08] text-left">
+        <div className="flex items-center gap-1.5 mb-1">
+          <Keyboard className="w-3 h-3 text-teal-400" />
+          <span className="text-[10px] font-semibold text-slate-300">Shortcuts</span>
+        </div>
+        <p className="text-[9px] text-slate-500 leading-relaxed font-tabular">
+          <kbd className="text-sky-400">Ctrl+Shift+E</kbd> Explain<br />
+          <kbd className="text-sky-400">Ctrl+Shift+F</kbd> Focus
+        </p>
+      </div>
+    </div>
+  </div>
+);
+
+/**
  * ChatTab
  * Conversation stream rendering user bubbles, assistant cards, and zero-token deterministic badges.
  */
@@ -108,6 +146,9 @@ export const ChatTab: FC<ChatTabProps> = ({
       aria-labelledby="tab-chat"
       className="space-y-3 pb-2 text-sm"
     >
+      {/* Branded Onboarding Card for Fresh Sessions */}
+      {messages.length === 0 && !isStreaming && <WelcomeCard />}
+
       {messages.map((msg) => (
         <article
           key={msg.id}

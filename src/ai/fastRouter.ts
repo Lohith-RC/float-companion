@@ -81,7 +81,7 @@ export async function matchLocalIntent(prompt: string): Promise<RouterResult> {
     }
   }
 
-  // 3. Application Launcher (Sub-20ms)
+  // 4. Application Launcher (Sub-20ms)
   const launchMatch = p.match(/^(?:open|launch|start)\s+([a-zA-Z0-9\s_-]+)$/i);
   if (launchMatch) {
     const appTarget = launchMatch[1].trim();
@@ -102,7 +102,7 @@ export async function matchLocalIntent(prompt: string): Promise<RouterResult> {
     }
   }
 
-  // 4. Port Conflict & Killer Resolver
+  // 5. Port Conflict & Killer Resolver
   const portMatch = p.match(/^(?:kill\s+port|port\s+kill|port|who\s+uses\s+port)\s+(\d+)$/i);
   if (portMatch) {
     const port = portMatch[1];
@@ -112,7 +112,7 @@ export async function matchLocalIntent(prompt: string): Promise<RouterResult> {
     };
   }
 
-  // 5. Git Status & Cheatsheet Helper
+  // 6. Git Status & Cheatsheet Helper
   if (p === 'git' || p === 'git status' || p === 'git help') {
     return {
       handled: true,
@@ -120,7 +120,7 @@ export async function matchLocalIntent(prompt: string): Promise<RouterResult> {
     };
   }
 
-  // 6. Network & IP Inspector
+  // 7. Network & IP Inspector
   if (p === 'ip' || p === 'network' || p === 'my ip') {
     return {
       handled: true,
@@ -128,7 +128,7 @@ export async function matchLocalIntent(prompt: string): Promise<RouterResult> {
     };
   }
 
-  // 7. Clear Chat History
+  // 8. Clear Chat History
   if (p === 'clear' || p === '/clear' || p === 'cls') {
     return {
       handled: true,
@@ -137,15 +137,15 @@ export async function matchLocalIntent(prompt: string): Promise<RouterResult> {
     };
   }
 
-  // 8. Quick Help
+  // 9. Quick Help
   if (p === 'help' || p === '/help') {
     return {
       handled: true,
-      reply: `🤖 **FloatCompanion Zero-Token Commands:**\n- \`time\` or \`date\` — Instant machine clock\n- \`ram\` or \`memory\` — Real-time memory consumption\n- \`disk\` or \`storage\` — Drive headroom\n- \`port <number>\` — Kill or find process on port (e.g. \`port 3000\`)\n- \`git\` — Git status cheatsheet\n- \`open <app>\` — Launch app (e.g. \`open vscode\`, \`open notepad\`)\n- \`clear\` — Reset chat history\n- Shortcuts: \`Ctrl + Shift + Space\` (HUD), \`Ctrl + Shift + E\` (Explain Selection).`,
+      reply: `🤖 **FloatCompanion Zero-Token Commands:**\n- \`time\` or \`date\` — Instant machine clock\n- \`ram\` or \`memory\` — Real-time memory consumption\n- \`disk\` or \`storage\` — Drive headroom\n- \`port <number>\` — Kill or find process on port (e.g. \`port 3000\`)\n- \`git\` — Git status cheatsheet\n- \`open <app>\` — Launch app (e.g. \`open vscode\`, \`open notepad\`)\n- \`clear\` — Reset chat history\n\n⌨️ **Shortcuts:**\n- \`Ctrl+Shift+Space\` — Summon / Collapse HUD\n- \`Ctrl+Shift+E\` — Explain Active Selection\n- \`Ctrl+Shift+F\` — Instant 25m Focus Sprint\n- \`Ctrl+Shift+C\` — Fullscreen Canvas Overlay\n- \`Esc\` — Collapse to Orb`,
     };
   }
 
-  // 5. Unmatched: Forward to Cloud / Local AI
+  // 10. Unmatched: Forward to Cloud / Local AI
   return {
     handled: false,
   };
