@@ -16,7 +16,6 @@ export const GitHubAuthModal: FC = () => {
 
   const [copied, setCopied] = useState(false);
   const [patInput, setPatInput] = useState('');
-  const [showPatInput, setShowPatInput] = useState(false);
 
   if (!isModalOpen) return null;
 
@@ -147,41 +146,51 @@ export const GitHubAuthModal: FC = () => {
           </div>
         )}
 
-        {/* Divider / PAT Option */}
-        <div className="mt-4 pt-3 border-t border-white/10">
-          {!showPatInput ? (
-            <button
-              type="button"
-              onClick={() => setShowPatInput(true)}
-              className="w-full text-center text-[11px] text-slate-400 hover:text-sky-300 transition-colors flex items-center justify-center gap-1.5"
+        {/* Instant Free Token Section */}
+        <div className="mt-4 pt-3 border-t border-white/10 space-y-2.5">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-semibold text-slate-300 flex items-center gap-1.5">
+              <Key className="w-3.5 h-3.5 text-sky-400" />
+              <span>Instant Token Connect (100% Free)</span>
+            </span>
+            <a
+              href="https://github.com/settings/tokens/new?scopes=read:user&description=FloatCompanion"
+              target="_blank"
+              rel="noreferrer"
+              className="text-[10px] text-sky-400 hover:underline flex items-center gap-1 font-medium"
+              onClick={(e) => {
+                if (window.electronAPI?.auth?.openExternal) {
+                  e.preventDefault();
+                  window.electronAPI.auth.openExternal('https://github.com/settings/tokens/new?scopes=read:user&description=FloatCompanion');
+                }
+              }}
             >
-              <Key className="w-3 h-3" />
-              <span>Or connect with Personal Access Token</span>
+              <span>Generate on GitHub</span>
+              <ExternalLink className="w-2.5 h-2.5" />
+            </a>
+          </div>
+
+          <p className="text-[10px] text-slate-400 leading-relaxed">
+            Click <strong>Generate on GitHub</strong> (pre-fills with <code className="text-sky-300">read:user</code>), then paste the token below:
+          </p>
+
+          <form onSubmit={handlePatSubmit} className="flex gap-1.5">
+            <input
+              id="pat-token-input"
+              type="password"
+              value={patInput}
+              onChange={(e) => setPatInput(e.target.value)}
+              placeholder="ghp_xxxxxxxxxxxx"
+              className="flex-1 px-2.5 py-1.5 text-xs bg-slate-950 border border-white/10 rounded-lg text-white placeholder-slate-600 focus:outline-none focus:border-sky-400 font-mono"
+            />
+            <button
+              type="submit"
+              disabled={!patInput.trim() || isLoading}
+              className="px-3 py-1.5 bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 disabled:opacity-50 text-xs rounded-lg text-white font-medium transition-all shadow-sm"
+            >
+              Connect
             </button>
-          ) : (
-            <form onSubmit={handlePatSubmit} className="space-y-2 mt-1">
-              <label htmlFor="pat-token-input" className="text-[10px] text-slate-400 block font-medium">
-                GitHub Token (<code className="text-sky-300">ghp_...</code> with <code className="text-slate-300">read:user</code>)
-              </label>
-              <div className="flex gap-1.5">
-                <input
-                  id="pat-token-input"
-                  type="password"
-                  value={patInput}
-                  onChange={(e) => setPatInput(e.target.value)}
-                  placeholder="ghp_xxxxxxxxxxxx"
-                  className="flex-1 px-2.5 py-1.5 text-xs bg-slate-950 border border-white/10 rounded-lg text-white placeholder-slate-600 focus:outline-none focus:border-sky-400"
-                />
-                <button
-                  type="submit"
-                  disabled={!patInput.trim() || isLoading}
-                  className="px-3 py-1.5 bg-white/10 hover:bg-white/20 disabled:opacity-50 text-xs rounded-lg text-white font-medium transition-colors"
-                >
-                  Connect
-                </button>
-              </div>
-            </form>
-          )}
+          </form>
         </div>
       </div>
     </div>
