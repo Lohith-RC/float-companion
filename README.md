@@ -29,10 +29,11 @@
 
 </div>
 
-## 🌐 Live Interactive Experience
-Want to test the floating orb kinematics, doppelrand acoustics, and glassmorphic HUD without installing?  
-Open the **Live In-Browser Simulator & Marketing Landing Page**:  
-👉 **[Launch FloatCompanion Web Simulator](https://lohith-rc.github.io/float-companion/website/)** *(or open [`website/index.html`](./website/index.html) locally)*.
+## 📦 Download Desktop App & Live Demo
+
+* **Windows 10/11 Standalone App:** 👉 **[Download FloatCompanion v1.0.0 for Windows (.zip)](https://github.com/Lohith-RC/float-companion/releases/download/v1.0.0/FloatCompanion-v1.0.0-windows-x64.zip)** *(Extract and run `FloatCompanion.exe` — no install required)*
+* **All Releases & Assets:** 👉 **[GitHub Releases Page](https://github.com/Lohith-RC/float-companion/releases)**
+* **In-Browser Web Simulator:** 👉 **[Launch Live Simulator](https://lohith-rc.github.io/float-companion/website/)** *(Test orb kinematics directly in your browser)*
 
 ---
 
