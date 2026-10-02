@@ -96,14 +96,56 @@ function validateTypeTextPayload(payload) {
   return { valid: true };
 }
 
+}
+
 /**
- * Validates mouse event ignoring payloads
+ * High-Performance Token Bucket Rate Limiter
+ * Guards high-privilege IPC channels against DoS, screen capture spam, and disk thrashing.
  */
-function validateIgnoreMousePayload(payload) {
-  if (!isObject(payload)) {
-    return { valid: false, error: 'ignoreMouse payload must be an object' };
+class TokenBucketLimiter {
+  constructor(capacity, refillTokensPerSec) {
+    this.capacity = capacity;
+    this.tokens = capacity;
+    this.refillRate = refillTokensPerSec;
+    this.lastRefill = Date.now();
   }
-  return { valid: true };
+
+  tryConsume(tokens = 1) {
+    const now = Date.now();
+    const elapsedSec = (now - this.lastRefill) / 1000;
+    this.tokens = Math.min(this.capacity, this.tokens + elapsedSec * this.refillRate);
+    this.lastRefill = now;
+
+    if (this.tokens >= tokens) {
+      this.tokens -= tokens;
+      return true;
+    }
+    return false;
+  }
+}
+
+// 2 bursts, 0.67 tokens/sec (max 1 screenshot every 1.5s after burst)
+const screenCaptureLimiter = new TokenBucketLimiter(2, 0.67);
+// 10 bursts, 2 tokens/sec
+const secureStoreLimiter = new TokenBucketLimiter(10, 2);
+// 5 bursts, 1 token/sec
+const appLaunchLimiter = new TokenBucketLimiter(5, 1);
+
+function checkRateLimit(channel) {
+  if (channel === 'os:capture-screen') {
+    if (!screenCaptureLimiter.tryConsume(1)) {
+      return { allowed: false, error: 'Rate limit: screen capture throttled to prevent GPU memory thrashing' };
+    }
+  } else if (channel === 'store:set-secure-key') {
+    if (!secureStoreLimiter.tryConsume(1)) {
+      return { allowed: false, error: 'Rate limit: secure credential storage operations throttled' };
+    }
+  } else if (channel === 'os:open-app') {
+    if (!appLaunchLimiter.tryConsume(1)) {
+      return { allowed: false, error: 'Rate limit: application launching throttled' };
+    }
+  }
+  return { allowed: true };
 }
 
 module.exports = {
@@ -112,4 +154,6 @@ module.exports = {
   validateSecureKeyPayload,
   validateTypeTextPayload,
   validateIgnoreMousePayload,
+  checkRateLimit,
 };
+

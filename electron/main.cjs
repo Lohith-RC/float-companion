@@ -1,7 +1,7 @@
 const { app, BrowserWindow, ipcMain, globalShortcut, screen, Tray, Menu, nativeImage, shell, session, clipboard } = require('electron');
 const { exec } = require('child_process');
 const path = require('path');
-const { validateResizePayload, validateSecureKeyPayload } = require('./ipcValidator.cjs');
+const { validateResizePayload, validateSecureKeyPayload, checkRateLimit } = require('./ipcValidator.cjs');
 const { registerSystemHandlers, stopFocusMonitoring } = require('./systemHandlers.cjs');
 const { registerAuthHandlers } = require('./authHandlers.cjs');
 const SecureStore = require('./secureStore.cjs');
@@ -321,6 +321,8 @@ ipcMain.handle('store:get-secure-key', async (_event, payload) => {
 
 ipcMain.handle('store:set-secure-key', async (_event, payload) => {
   if (!secureStore) return { success: false };
+  const rate = checkRateLimit('store:set-secure-key');
+  if (!rate.allowed) return { success: false, error: rate.error };
   const val = validateSecureKeyPayload(payload || {});
   if (!val.valid) return { success: false, error: val.error };
   const res = secureStore.set(payload.keyName, payload.keyValue);

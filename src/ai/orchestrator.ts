@@ -1,6 +1,8 @@
 import { ChatMessage } from '../store/useAppStore';
 import { prepareOptimizedContext, PromptMessage } from './contextCompressor';
 import { UserSettings } from '../db/indexedDB';
+import { sanitizePromptForDLP } from '../services/securityDLP';
+import { useToastStore } from '../store/useToastStore';
 
 import { getErrorMessage } from '../utils/errorUtils';
 
@@ -37,7 +39,24 @@ export class AIOrchestrator {
     this.abortController = new AbortController();
     const signal = this.abortController.signal;
 
-    const messages = prepareOptimizedContext([...history, { id: 'temp', role: 'user', content: prompt, timestamp: Date.now() }]);
+    let activePrompt = prompt;
+
+    // Zero-Trust DLP Shield: Sanitize secrets (API keys, JWTs, DB passwords) before transmission
+    if (settings.dlpEnabled !== false) {
+      const dlpResult = sanitizePromptForDLP(activePrompt);
+      if (dlpResult.hasRedactions) {
+        activePrompt = dlpResult.sanitizedText;
+        const uniqueRedactions = Array.from(new Set(dlpResult.redactions)).join(', ');
+        useToastStore
+          .getState()
+          .showToast(`🛡️ DLP Shield: Redacted sensitive credential (${uniqueRedactions})`, 'info');
+      }
+    }
+
+    const messages = prepareOptimizedContext([
+      ...history,
+      { id: 'temp', role: 'user', content: activePrompt, timestamp: Date.now() },
+    ]);
 
     // Multimodal Vision Route: If image attached, route to Gemini 2.5 Flash
     if (imageAttachment) {

@@ -2,7 +2,7 @@ const { ipcMain, screen, desktopCapturer, clipboard } = require('electron');
 const { exec, spawn } = require('child_process');
 const os = require('os');
 const { validateCommand } = require('./securityKernel.cjs');
-const { validateFocusSessionPayload, validateTypeTextPayload } = require('./ipcValidator.cjs');
+const { validateFocusSessionPayload, validateTypeTextPayload, checkRateLimit } = require('./ipcValidator.cjs');
 
 let focusProcess = null;
 let cachedStorageInfo = null;
@@ -97,6 +97,11 @@ function registerSystemHandlers(getMainWindow) {
 
   // 2. Launch Application Channel with Security Sandbox Whitelist
   ipcMain.handle('os:launch-app', async (_event, payload) => {
+    const rateCheck = checkRateLimit('os:open-app');
+    if (!rateCheck.allowed) {
+      return { success: false, actionTaken: 'throttled', error: rateCheck.error };
+    }
+
     const targetRaw = (payload?.target || payload?.appName || '').trim();
     const normalized = targetRaw.toLowerCase();
 
@@ -200,6 +205,11 @@ function registerSystemHandlers(getMainWindow) {
 
   // 4. Desktop Multimodal Capture Channel (Targeted to Active Display)
   ipcMain.handle('os:capture-screen', async () => {
+    const rateCheck = checkRateLimit('os:capture-screen');
+    if (!rateCheck.allowed) {
+      return { success: false, dataUrl: '', base64Data: '', mimeType: 'image/jpeg', error: rateCheck.error };
+    }
+
     try {
       const win = getMainWindow();
       const targetDisplay = win ? screen.getDisplayMatching(win.getBounds()) : screen.getPrimaryDisplay();

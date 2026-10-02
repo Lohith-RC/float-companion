@@ -20,6 +20,7 @@ export const SettingsView: FC<SettingsViewProps> = ({ settings, onUpdate, onClos
   const [showGroq, setShowGroq] = useState(false);
   const [showGemini, setShowGemini] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(settings.soundEnabled ?? true);
+  const [dlpEnabled, setDlpEnabled] = useState(settings.dlpEnabled ?? true);
   const [blacklist, setBlacklist] = useState(settings.distractionBlacklist || []);
   const [newKeyword, setNewKeyword] = useState('');
   const [savedSuccess, setSavedSuccess] = useState(false);
@@ -61,6 +62,7 @@ export const SettingsView: FC<SettingsViewProps> = ({ settings, onUpdate, onClos
       geminiKey: cleanGemini,
       defaultModel,
       soundEnabled,
+      dlpEnabled,
       distractionBlacklist: blacklist,
     };
     sounds.setEnabled(soundEnabled);
@@ -471,6 +473,43 @@ export const SettingsView: FC<SettingsViewProps> = ({ settings, onUpdate, onClos
               </div>
             </div>
           )}
+        </div>
+
+        {/* Zero-Trust AI Data Loss Prevention (DLP) Section */}
+        <div className="p-3 bg-slate-900/60 rounded-xl border border-white/10 flex items-center justify-between shadow-inner">
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-lg bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center">
+              <Shield className="w-3.5 h-3.5 text-emerald-400" />
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-slate-200 block font-semibold text-xs">AI Data Loss Prevention (DLP)</span>
+                <span className="text-[9px] text-emerald-400 font-tabular px-1.5 py-0.2 rounded bg-emerald-500/10 border border-emerald-500/20">
+                  Zero-Trust
+                </span>
+              </div>
+              <span className="text-[10px] text-slate-400">Sanitizes API keys, JWTs & DB passwords before transmission</span>
+            </div>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={dlpEnabled}
+            onClick={() => {
+              const next = !dlpEnabled;
+              setDlpEnabled(next);
+              sounds.playClick();
+            }}
+            className={`w-9 h-5 rounded-full p-0.5 transition-colors ${
+              dlpEnabled ? 'bg-emerald-500' : 'bg-slate-700'
+            }`}
+          >
+            <div
+              className={`w-4 h-4 rounded-full bg-white transition-transform ${
+                dlpEnabled ? 'translate-x-4' : 'translate-x-0'
+              }`}
+            />
+          </button>
         </div>
 
         {/* Audio Effects Section */}

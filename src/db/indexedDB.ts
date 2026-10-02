@@ -20,6 +20,7 @@ export interface UserSettings {
   githubClientId?: string;
   googleClientId?: string;
   microsoftClientId?: string;
+  dlpEnabled?: boolean;
   authUser?: {
     provider: 'github' | 'google' | 'microsoft';
     id: string;
@@ -52,6 +53,7 @@ export const defaultSettings: UserSettings = {
   openaiKey: '',
   defaultModel: 'groq',
   soundEnabled: true,
+  dlpEnabled: true,
   distractionBlacklist: ['youtube', 'netflix', 'reddit', 'twitter', 'x.com', 'instagram', 'twitch', 'tiktok'],
 };
 
