@@ -12,6 +12,7 @@
 [![Tailwind](https://img.shields.io/badge/TailwindCSS-3.4-38bdf8?style=for-the-badge&logo=tailwindcss)](https://tailwindcss.com/)
 [![License](https://img.shields.io/badge/License-MIT-10b981?style=for-the-badge)](./LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-Windows%2010%2F11%20%7C%20macOS-f59e0b?style=for-the-badge)]()
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/Lohith-RC/float-companion)
 
 <br />
 
@@ -34,6 +35,7 @@
 * **Windows 10/11 Standalone App:** 👉 **[Download FloatCompanion v1.0.0 for Windows (.zip)](https://github.com/Lohith-RC/float-companion/releases/download/v1.0.0/FloatCompanion-v1.0.0-windows-x64.zip)** *(Extract and run `FloatCompanion.exe` — no install required)*
 * **All Releases & Assets:** 👉 **[GitHub Releases Page](https://github.com/Lohith-RC/float-companion/releases)**
 * **In-Browser Web Simulator:** 👉 **[Launch Live Simulator](https://lohith-rc.github.io/float-companion/website/)** *(Test orb kinematics directly in your browser)*
+* **1-Click Live Deploy on Vercel:** 👉 **[Deploy FloatCompanion on Vercel](https://vercel.com/new/clone?repository-url=https://github.com/Lohith-RC/float-companion)** *(Instant live hosting with zero config)*
 
 ---
 
