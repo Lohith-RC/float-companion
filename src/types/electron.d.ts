@@ -121,11 +121,18 @@ export interface FloatCompanionAPI {
       error?: string;
     }>;
     cancelGoogleOAuth: () => Promise<{ success: boolean }>;
+    startMicrosoftOAuth: (clientId?: string) => Promise<{
+      success: boolean;
+      profile?: AuthUserProfile;
+      accessToken?: string;
+      error?: string;
+    }>;
+    cancelMicrosoftOAuth: () => Promise<{ success: boolean }>;
     openExternal: (url: string) => Promise<{ success: boolean; error?: string }>;
   };
 }
 
-export type AuthProvider = 'github' | 'google';
+export type AuthProvider = 'github' | 'google' | 'microsoft';
 
 export interface AuthUserProfile {
   provider: AuthProvider;

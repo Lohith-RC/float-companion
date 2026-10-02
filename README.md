@@ -137,11 +137,12 @@ Modern computer workflows are **deeply fragmented**, forcing you into constant c
 * Zero `any` types across the entire TypeScript codebase.
 * Strict modular architecture ensuring all components remain **under 400 lines of code**.
 
-### 9. 🔑 Dual Free OAuth: Google & GitHub Identity
-* **100% Free Forever:** Zero cloud servers, subscriptions, or proxies. Both providers run natively inside Electron's secure main process.
-* **Google OAuth 2.0 (RFC 8252 Loopback with PKCE):** 1-Click "Sign in with Google". Spins up an ephemeral local loopback server (`127.0.0.1`), handles authorization in your system browser, and verifies identity via Google's userinfo endpoints with zero client secret exposure.
+### 9. 🔑 Trio Free OAuth: Google, GitHub & Microsoft Account Identity
+* **100% Free Forever:** Zero cloud servers, subscriptions, or proxies. All three providers run natively inside Electron's secure main process with zero maintenance cost.
+* **Google OAuth 2.0 (RFC 8252 Loopback with PKCE):** 1-Click "Sign in with Google". Spins up an ephemeral local loopback server (`127.0.0.1`), handles authorization in your system browser, and verifies identity via Google's OpenID userinfo endpoints with zero client secret exposure.
 * **GitHub Device Flow (RFC 8628 & PAT):** Native device code grant with 1-click clipboard copy and pre-filled token generation link.
-* **Unified Ambient Identity:** Verified user avatar and badge (`G` or `GH`) in the Tray Header, personalized greetings in the chat pane, and dedicated Connected Accounts settings card.
+* **Microsoft Account OAuth 2.0 (RFC 8252 Loopback with PKCE):** 1-Click "Sign in with Microsoft". Connect any personal `@outlook.com` / `@hotmail.com` or organizational Microsoft 365 account via Microsoft Identity Platform v2.0 (`/common`) and Microsoft Graph API (`/v1.0/me`).
+* **Unified Ambient Identity:** Verified user avatar and badge (`G`, `GH`, or `MS`) in the Tray Header, personalized greetings in the chat pane, and dedicated Connected Accounts settings card.
 * **Hardware-Encrypted DPAPI Vault:** Access tokens are stored using Windows Data Protection API (DPAPI) hardware encryption.
 
 ---

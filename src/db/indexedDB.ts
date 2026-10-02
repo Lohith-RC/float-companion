@@ -19,8 +19,9 @@ export interface UserSettings {
   } | null;
   githubClientId?: string;
   googleClientId?: string;
+  microsoftClientId?: string;
   authUser?: {
-    provider: 'github' | 'google';
+    provider: 'github' | 'google' | 'microsoft';
     id: string;
     login?: string;
     name: string;

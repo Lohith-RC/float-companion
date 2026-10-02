@@ -68,6 +68,8 @@ export const TrayHeader: FC<TrayHeaderProps> = ({
             title={
               user.provider === 'google'
                 ? `Connected via Google: ${user.name} (${user.email || ''})`
+                : user.provider === 'microsoft'
+                ? `Connected via Microsoft: ${user.name} (${user.email || ''})`
                 : `Connected via GitHub: @${user.login} (${user.name})`
             }
             aria-label={`User profile: ${user.name || user.login}`}
@@ -80,7 +82,11 @@ export const TrayHeader: FC<TrayHeaderProps> = ({
               />
               <span
                 className={`absolute -bottom-0.5 -right-0.5 w-1.5 h-1.5 rounded-full border border-slate-900 ${
-                  user.provider === 'google' ? 'bg-sky-400' : 'bg-emerald-400'
+                  user.provider === 'google'
+                    ? 'bg-sky-400'
+                    : user.provider === 'microsoft'
+                    ? 'bg-[#0078d4]'
+                    : 'bg-emerald-400'
                 }`}
               />
             </div>

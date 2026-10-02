@@ -106,10 +106,14 @@ const WelcomeCard: FC = () => {
           />
           <span
             className={`absolute -bottom-1 -right-1 px-1.5 py-0.2 text-[8px] font-bold text-slate-950 rounded-full border border-slate-900 ${
-              user.provider === 'google' ? 'bg-sky-400' : 'bg-emerald-400'
+              user.provider === 'google'
+                ? 'bg-sky-400'
+                : user.provider === 'microsoft'
+                ? 'bg-[#0078d4] text-white'
+                : 'bg-emerald-400'
             }`}
           >
-            {user.provider === 'google' ? 'G' : 'GH'}
+            {user.provider === 'google' ? 'G' : user.provider === 'microsoft' ? 'MS' : 'GH'}
           </span>
         </div>
       ) : (
@@ -120,7 +124,7 @@ const WelcomeCard: FC = () => {
       <div>
         <h2 className="text-sm font-bold text-white mb-0.5">
           {user
-            ? `Welcome back, ${user.provider === 'google' ? user.name.split(' ')[0] : `@${user.login}`} 👋`
+            ? `Welcome back, ${user.name ? user.name.split(' ')[0] : `@${user.login}`} 👋`
             : 'FloatCompanion'}
         </h2>
         <p className="text-[11px] text-slate-400 max-w-[260px] leading-relaxed">

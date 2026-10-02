@@ -19,24 +19,29 @@ interface AuthState {
   isLoading: boolean;
   isPolling: boolean;
   isGoogleLoading: boolean;
+  isMicrosoftLoading: boolean;
   isModalOpen: boolean;
-  activeAuthTab: 'all' | 'github' | 'google';
+  activeAuthTab: 'all' | 'github' | 'google' | 'microsoft';
   customClientId: string;
   customGoogleClientId: string;
+  customMicrosoftClientId: string;
   deviceFlow: DeviceFlowState | null;
 
   // Actions
   init: () => Promise<void>;
-  openModal: (initialTab?: 'all' | 'github' | 'google') => void;
+  openModal: (initialTab?: 'all' | 'github' | 'google' | 'microsoft') => void;
   closeModal: () => void;
-  setActiveAuthTab: (tab: 'all' | 'github' | 'google') => void;
+  setActiveAuthTab: (tab: 'all' | 'github' | 'google' | 'microsoft') => void;
   setCustomClientId: (clientId: string) => void;
   setCustomGoogleClientId: (clientId: string) => void;
+  setCustomMicrosoftClientId: (clientId: string) => void;
   startDeviceFlow: () => Promise<void>;
   cancelDeviceFlow: () => void;
   loginWithToken: (token: string) => Promise<boolean>;
   startGoogleOAuth: () => Promise<boolean>;
   cancelGoogleOAuth: () => void;
+  startMicrosoftOAuth: () => Promise<boolean>;
+  cancelMicrosoftOAuth: () => void;
   logout: () => Promise<void>;
 }
 
@@ -48,10 +53,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isLoading: false,
   isPolling: false,
   isGoogleLoading: false,
+  isMicrosoftLoading: false,
   isModalOpen: false,
   activeAuthTab: 'all',
   customClientId: '',
   customGoogleClientId: '',
+  customMicrosoftClientId: '',
   deviceFlow: null,
 
   init: async () => {
@@ -59,6 +66,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const settings = await loadSettings();
       if (settings.githubClientId) set({ customClientId: settings.githubClientId });
       if (settings.googleClientId) set({ customGoogleClientId: settings.googleClientId });
+      if (settings.microsoftClientId) set({ customMicrosoftClientId: settings.microsoftClientId });
 
       // Check for cached profile
       const cachedProfile = settings.authUser || (settings.githubUser ? {
@@ -73,11 +81,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         email: settings.githubUser.email,
       } : null);
 
-      // Check Electron safeStorage DPAPI vault for cached tokens
       let token: string | null = null;
-      if (window.electronAPI?.store?.getSecureKey) {
-        if (cachedProfile?.provider === 'google') {
+      if (window.electronAPI?.store?.getSecureKey && cachedProfile) {
+        if (cachedProfile.provider === 'google') {
           const res = await window.electronAPI.store.getSecureKey('google_token');
+          token = res.key || null;
+        } else if (cachedProfile.provider === 'microsoft') {
+          const res = await window.electronAPI.store.getSecureKey('microsoft_token');
           token = res.key || null;
         } else {
           const res = await window.electronAPI.store.getSecureKey('github_token');
@@ -85,7 +95,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         }
       }
 
-      // Fallback: check localStorage for web simulator mode
       if (!token && typeof localStorage !== 'undefined') {
         token = localStorage.getItem('fc_auth_token');
       }
@@ -105,7 +114,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   closeModal: () => {
     get().cancelDeviceFlow();
     get().cancelGoogleOAuth();
-    set({ isModalOpen: false, isGoogleLoading: false });
+    get().cancelMicrosoftOAuth();
+    set({ isModalOpen: false, isGoogleLoading: false, isMicrosoftLoading: false });
   },
 
   setActiveAuthTab: (tab) => {
@@ -126,6 +136,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     await saveSettings({ ...settings, googleClientId: trimmed });
   },
 
+  setCustomMicrosoftClientId: async (clientId: string) => {
+    const trimmed = clientId.trim();
+    set({ customMicrosoftClientId: trimmed });
+    const settings = await loadSettings();
+    await saveSettings({ ...settings, microsoftClientId: trimmed });
+  },
+
   cancelDeviceFlow: () => {
     if (pollTimer) {
       clearTimeout(pollTimer);
@@ -141,6 +158,84 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ isGoogleLoading: false });
   },
 
+  cancelMicrosoftOAuth: () => {
+    if (window.electronAPI?.auth?.cancelMicrosoftOAuth) {
+      window.electronAPI.auth.cancelMicrosoftOAuth().catch(() => {});
+    }
+    set({ isMicrosoftLoading: false });
+  },
+
+  // ==========================================================================
+  // MICROSOFT OAUTH FLOW
+  // ==========================================================================
+  startMicrosoftOAuth: async () => {
+    const { customMicrosoftClientId } = get();
+    set({ isMicrosoftLoading: true });
+
+    try {
+      if (!window.electronAPI?.auth?.startMicrosoftOAuth) {
+        set({ isMicrosoftLoading: false });
+        useToastStore.getState().showToast(
+          'Microsoft OAuth loopback is native to desktop. Run npm run dev in Electron.',
+          'info'
+        );
+        return false;
+      }
+
+      useToastStore.getState().showToast('Opening Microsoft sign-in in your browser...', 'info');
+      sounds.playClick();
+
+      const res = await window.electronAPI.auth.startMicrosoftOAuth(customMicrosoftClientId || undefined);
+
+      if (!res.success || !res.profile) {
+        set({ isMicrosoftLoading: false });
+        useToastStore.getState().showToast(
+          res.error || 'Microsoft sign-in was cancelled or encountered an error',
+          'error'
+        );
+        return false;
+      }
+
+      const profile: AuthUserProfile = {
+        provider: 'microsoft',
+        id: res.profile.id,
+        login: res.profile.login || 'ms_user',
+        name: res.profile.name,
+        avatarUrl: res.profile.avatarUrl,
+        email: res.profile.email,
+      };
+
+      if (res.accessToken && window.electronAPI?.store?.setSecureKey) {
+        await window.electronAPI.store.setSecureKey('microsoft_token', res.accessToken);
+      }
+      if (res.accessToken && typeof localStorage !== 'undefined') {
+        localStorage.setItem('fc_auth_token', res.accessToken);
+      }
+
+      const settings = await loadSettings();
+      await saveSettings({ ...settings, authUser: profile });
+
+      set({
+        user: profile,
+        accessToken: res.accessToken || null,
+        isMicrosoftLoading: false,
+        isModalOpen: false,
+      });
+
+      sounds.playChime();
+      useToastStore.getState().showToast(
+        `Signed in as ${profile.name} via Microsoft!`,
+        'success'
+      );
+      return true;
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Microsoft authentication failed';
+      set({ isMicrosoftLoading: false });
+      useToastStore.getState().showToast(msg, 'error');
+      return false;
+    }
+  },
+
   // ==========================================================================
   // GOOGLE OAUTH FLOW
   // ==========================================================================
@@ -152,7 +247,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       if (!window.electronAPI?.auth?.startGoogleOAuth) {
         set({ isGoogleLoading: false });
         useToastStore.getState().showToast(
-          'Google OAuth loopback is native to the desktop app. Run npm run dev in Electron.',
+          'Google OAuth loopback is native to desktop. Run npm run dev in Electron.',
           'info'
         );
         return false;
@@ -181,7 +276,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         email: res.profile.email,
       };
 
-      // Save token in DPAPI safeStorage
       if (res.accessToken && window.electronAPI?.store?.setSecureKey) {
         await window.electronAPI.store.setSecureKey('google_token', res.accessToken);
       }
@@ -189,7 +283,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         localStorage.setItem('fc_auth_token', res.accessToken);
       }
 
-      // Save profile in IndexedDB
       const settings = await loadSettings();
       await saveSettings({ ...settings, authUser: profile });
 
@@ -260,7 +353,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       sounds.playChime();
 
-      // Begin polling
       const poll = async () => {
         const state = get();
         if (!state.isPolling || !state.deviceFlow) return;
@@ -375,11 +467,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   logout: async () => {
     get().cancelDeviceFlow();
     get().cancelGoogleOAuth();
+    get().cancelMicrosoftOAuth();
 
-    // Clear DPAPI safeStorage
     if (window.electronAPI?.store?.setSecureKey) {
       await window.electronAPI.store.setSecureKey('github_token', '');
       await window.electronAPI.store.setSecureKey('google_token', '');
+      await window.electronAPI.store.setSecureKey('microsoft_token', '');
     }
     if (typeof localStorage !== 'undefined') {
       localStorage.removeItem('fc_auth_token');
@@ -393,6 +486,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       accessToken: null,
       isLoading: false,
       isGoogleLoading: false,
+      isMicrosoftLoading: false,
       isModalOpen: false,
     });
 

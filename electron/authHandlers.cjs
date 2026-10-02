@@ -7,22 +7,26 @@ const { URL, URLSearchParams } = require('url');
 const DEFAULT_GITHUB_CLIENT_ID = 'Ov23liZ08jT6F4zV2pQe';
 
 // Default Google OAuth Client ID fallback (for Desktop App / Installed Application)
-// Users can provide their own Google Client ID from Google Cloud Console in Settings
 const DEFAULT_GOOGLE_CLIENT_ID = '60136653249-1t8c567jckhsd19v9qf47f2hnd688qg5.apps.googleusercontent.com';
+
+// Default Microsoft Identity Client ID fallback (for Desktop / Mobile Application)
+const DEFAULT_MICROSOFT_CLIENT_ID = '9ba1c9d2-45e0-47b2-a42e-13c5ee7e5f9a';
 
 let activeGoogleServer = null;
 let googleTimeout = null;
 
+let activeMicrosoftServer = null;
+let microsoftTimeout = null;
+
 /**
- * Registers multi-provider OAuth (GitHub + Google) IPC handlers.
+ * Registers multi-provider OAuth (GitHub + Google + Microsoft) IPC handlers.
  * 100% Free, serverless, and privacy-first desktop authentication.
  */
 function registerAuthHandlers() {
   // ============================================================================
-  // GITHUB OAUTH (Device Authorization Flow RFC 8628)
+  // 1. GITHUB OAUTH (Device Authorization Flow RFC 8628)
   // ============================================================================
 
-  // 1. Request Device Code from GitHub
   ipcMain.handle('auth:github-start-device-flow', async (_event, payload) => {
     try {
       const clientId = (payload && payload.clientId && payload.clientId.trim()) || DEFAULT_GITHUB_CLIENT_ID;
@@ -59,7 +63,6 @@ function registerAuthHandlers() {
     }
   });
 
-  // 2. Poll GitHub for user authorization
   ipcMain.handle('auth:github-poll-token', async (_event, payload) => {
     try {
       const { clientId, deviceCode } = payload || {};
@@ -119,7 +122,6 @@ function registerAuthHandlers() {
     }
   });
 
-  // 3. Fetch authenticated GitHub user profile
   ipcMain.handle('auth:github-get-profile', async (_event, payload) => {
     try {
       const token = payload && payload.token;
@@ -160,14 +162,12 @@ function registerAuthHandlers() {
   });
 
   // ============================================================================
-  // GOOGLE OAUTH 2.0 (RFC 8252 Loopback Flow with PKCE)
+  // 2. GOOGLE OAUTH 2.0 (RFC 8252 Loopback Flow with PKCE)
   // ============================================================================
 
-  // 4. Start Google OAuth Loopback Flow
   ipcMain.handle('auth:google-start-flow', async (_event, payload) => {
     return new Promise((resolve) => {
       try {
-        // Clean up any stale active server
         if (activeGoogleServer) {
           try { activeGoogleServer.close(); } catch {}
           activeGoogleServer = null;
@@ -178,12 +178,9 @@ function registerAuthHandlers() {
         }
 
         const clientId = (payload && payload.clientId && payload.clientId.trim()) || DEFAULT_GOOGLE_CLIENT_ID;
-
-        // Generate PKCE code verifier and challenge
         const codeVerifier = crypto.randomBytes(32).toString('base64url');
         const codeChallenge = crypto.createHash('sha256').update(codeVerifier).digest('base64url');
 
-        // Ephemeral local loopback server
         const server = http.createServer(async (req, res) => {
           try {
             const reqUrl = new URL(req.url, `http://${req.headers.host}`);
@@ -201,7 +198,7 @@ function registerAuthHandlers() {
               res.end(`
                 <!DOCTYPE html>
                 <html>
-                <body style="background:#090d16;color:#f87171;font-family:system-ui,-apple-system,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;">
+                <body style="background:#090d16;color:#f87171;font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;">
                   <div style="text-align:center;padding:32px;background:rgba(255,255,255,0.05);border-radius:16px;border:1px solid rgba(255,255,255,0.1);max-width:400px;">
                     <h2>❌ Google Authorization Cancelled</h2>
                     <p style="color:#94a3b8;font-size:13px;">${error}</p>
@@ -225,13 +222,12 @@ function registerAuthHandlers() {
               return;
             }
 
-            // Respond immediately with pleasant success page
             res.writeHead(200, { 'Content-Type': 'text/html' });
             res.end(`
               <!DOCTYPE html>
               <html>
               <head><meta charset="utf-8"><title>FloatCompanion - Authorized</title></head>
-              <body style="background:#090d16;color:#38bdf8;font-family:system-ui,-apple-system,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;">
+              <body style="background:#090d16;color:#38bdf8;font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;">
                 <div style="text-align:center;padding:40px 32px;background:rgba(15,23,42,0.85);border-radius:20px;border:1px solid rgba(255,255,255,0.1);box-shadow:0 20px 50px rgba(0,0,0,0.5);max-width:440px;">
                   <div style="font-size:36px;margin-bottom:12px;">✨</div>
                   <h2 style="margin:0 0 8px;font-size:20px;font-weight:700;color:#fff;">Connected with Google</h2>
@@ -251,7 +247,6 @@ function registerAuthHandlers() {
             server.close();
             activeGoogleServer = null;
 
-            // Exchange authorization code for tokens
             const redirectUri = `http://127.0.0.1:${server.address().port}/callback`;
             const tokenParams = new URLSearchParams({
               client_id: clientId,
@@ -276,7 +271,6 @@ function registerAuthHandlers() {
             const tokenData = await tokenRes.json();
             const accessToken = tokenData.access_token;
 
-            // Fetch Google userinfo
             const userRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
               headers: { 'Authorization': `Bearer ${accessToken}` },
             });
@@ -304,7 +298,6 @@ function registerAuthHandlers() {
           }
         });
 
-        // Listen on random free port
         server.listen(0, '127.0.0.1', async () => {
           const port = server.address().port;
           activeGoogleServer = server;
@@ -320,10 +313,8 @@ function registerAuthHandlers() {
             `access_type=offline&` +
             `prompt=consent`;
 
-          // Launch browser
           await shell.openExternal(googleAuthUrl);
 
-          // 5-minute timeout
           googleTimeout = setTimeout(() => {
             if (activeGoogleServer) {
               try { activeGoogleServer.close(); } catch {}
@@ -342,7 +333,6 @@ function registerAuthHandlers() {
     });
   });
 
-  // 5. Cancel Google OAuth server
   ipcMain.handle('auth:google-cancel', async () => {
     if (activeGoogleServer) {
       try { activeGoogleServer.close(); } catch {}
@@ -355,7 +345,199 @@ function registerAuthHandlers() {
     return { success: true };
   });
 
-  // 6. Safely open external link (e.g. github.com/login/device or Google Cloud Console)
+  // ============================================================================
+  // 3. MICROSOFT OAUTH 2.0 (RFC 8252 Loopback Flow with PKCE)
+  // ============================================================================
+
+  ipcMain.handle('auth:microsoft-start-flow', async (_event, payload) => {
+    return new Promise((resolve) => {
+      try {
+        if (activeMicrosoftServer) {
+          try { activeMicrosoftServer.close(); } catch {}
+          activeMicrosoftServer = null;
+        }
+        if (microsoftTimeout) {
+          clearTimeout(microsoftTimeout);
+          microsoftTimeout = null;
+        }
+
+        const clientId = (payload && payload.clientId && payload.clientId.trim()) || DEFAULT_MICROSOFT_CLIENT_ID;
+        const codeVerifier = crypto.randomBytes(32).toString('base64url');
+        const codeChallenge = crypto.createHash('sha256').update(codeVerifier).digest('base64url');
+
+        const server = http.createServer(async (req, res) => {
+          try {
+            const reqUrl = new URL(req.url, `http://${req.headers.host}`);
+            if (reqUrl.pathname !== '/callback') {
+              res.writeHead(404, { 'Content-Type': 'text/plain' });
+              res.end('Not Found');
+              return;
+            }
+
+            const error = reqUrl.searchParams.get('error');
+            const code = reqUrl.searchParams.get('code');
+
+            if (error) {
+              res.writeHead(200, { 'Content-Type': 'text/html' });
+              res.end(`
+                <!DOCTYPE html>
+                <html>
+                <body style="background:#090d16;color:#f87171;font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;">
+                  <div style="text-align:center;padding:32px;background:rgba(255,255,255,0.05);border-radius:16px;border:1px solid rgba(255,255,255,0.1);max-width:400px;">
+                    <h2>❌ Microsoft Authorization Cancelled</h2>
+                    <p style="color:#94a3b8;font-size:13px;">${error}</p>
+                    <p style="color:#64748b;font-size:12px;">You can close this tab and return to FloatCompanion.</p>
+                  </div>
+                </body>
+                </html>
+              `);
+              server.close();
+              activeMicrosoftServer = null;
+              resolve({ success: false, error: `Microsoft OAuth error: ${error}` });
+              return;
+            }
+
+            if (!code) {
+              res.writeHead(400, { 'Content-Type': 'text/plain' });
+              res.end('Missing code parameter');
+              server.close();
+              activeMicrosoftServer = null;
+              resolve({ success: false, error: 'No authorization code received' });
+              return;
+            }
+
+            res.writeHead(200, { 'Content-Type': 'text/html' });
+            res.end(`
+              <!DOCTYPE html>
+              <html>
+              <head><meta charset="utf-8"><title>FloatCompanion - Authorized</title></head>
+              <body style="background:#090d16;color:#38bdf8;font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;">
+                <div style="text-align:center;padding:40px 32px;background:rgba(15,23,42,0.85);border-radius:20px;border:1px solid rgba(255,255,255,0.1);box-shadow:0 20px 50px rgba(0,0,0,0.5);max-width:440px;">
+                  <div style="font-size:36px;margin-bottom:12px;">🪟</div>
+                  <h2 style="margin:0 0 8px;font-size:20px;font-weight:700;color:#fff;">Connected with Microsoft</h2>
+                  <p style="color:#94a3b8;font-size:13px;line-height:1.5;margin:0 0 16px;">
+                    Your Microsoft account is now linked to <strong>FloatCompanion</strong>.
+                  </p>
+                  <span style="font-size:11px;color:#0078d4;background:rgba(0,120,212,0.15);padding:4px 12px;border-radius:20px;border:1px solid rgba(0,120,212,0.3);">
+                    ✓ Microsoft Identity Verified
+                  </span>
+                  <p style="color:#64748b;font-size:11px;margin-top:20px;">You can safely close this browser window.</p>
+                </div>
+                <script>setTimeout(function(){ window.close(); }, 2500);</script>
+              </body>
+              </html>
+            `);
+
+            server.close();
+            activeMicrosoftServer = null;
+
+            const redirectUri = `http://127.0.0.1:${server.address().port}/callback`;
+            const tokenParams = new URLSearchParams({
+              client_id: clientId,
+              code: code,
+              code_verifier: codeVerifier,
+              grant_type: 'authorization_code',
+              redirect_uri: redirectUri,
+            });
+
+            const tokenRes = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+              body: tokenParams.toString(),
+            });
+
+            if (!tokenRes.ok) {
+              const errBody = await tokenRes.text();
+              resolve({ success: false, error: `Microsoft Token exchange failed (${tokenRes.status}): ${errBody}` });
+              return;
+            }
+
+            const tokenData = await tokenRes.json();
+            const accessToken = tokenData.access_token;
+
+            // Fetch Microsoft Graph Profile (/v1.0/me)
+            const userRes = await fetch('https://graph.microsoft.com/v1.0/me', {
+              headers: { 'Authorization': `Bearer ${accessToken}` },
+            });
+
+            if (!userRes.ok) {
+              resolve({ success: false, error: `Failed to fetch Microsoft profile (${userRes.status})` });
+              return;
+            }
+
+            const msUser = await userRes.json();
+            const displayName = msUser.displayName || `${msUser.givenName || ''} ${msUser.surname || ''}`.trim() || 'Microsoft User';
+            const email = msUser.mail || msUser.userPrincipalName || '';
+            const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=0078d4&color=fff&bold=true`;
+
+            resolve({
+              success: true,
+              accessToken: accessToken,
+              profile: {
+                provider: 'microsoft',
+                id: msUser.id,
+                name: displayName,
+                email: email,
+                avatarUrl: avatarUrl,
+                login: email ? email.split('@')[0] : 'ms_user',
+              },
+            });
+          } catch (err) {
+            resolve({ success: false, error: err.message || 'Error processing Microsoft callback' });
+          }
+        });
+
+        server.listen(0, '127.0.0.1', async () => {
+          const port = server.address().port;
+          activeMicrosoftServer = server;
+
+          const redirectUri = `http://127.0.0.1:${port}/callback`;
+          const msAuthUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?` +
+            `client_id=${encodeURIComponent(clientId)}&` +
+            `response_type=code&` +
+            `redirect_uri=${encodeURIComponent(redirectUri)}&` +
+            `response_mode=query&` +
+            `scope=${encodeURIComponent('openid profile email User.Read')}&` +
+            `code_challenge=${encodeURIComponent(codeChallenge)}&` +
+            `code_challenge_method=S256&` +
+            `prompt=select_account`;
+
+          await shell.openExternal(msAuthUrl);
+
+          microsoftTimeout = setTimeout(() => {
+            if (activeMicrosoftServer) {
+              try { activeMicrosoftServer.close(); } catch {}
+              activeMicrosoftServer = null;
+              resolve({ success: false, error: 'Microsoft sign-in timed out. Please try again.' });
+            }
+          }, 300000);
+        });
+
+        server.on('error', (err) => {
+          resolve({ success: false, error: `Microsoft loopback server error: ${err.message}` });
+        });
+      } catch (err) {
+        resolve({ success: false, error: err.message || 'Failed to start Microsoft sign-in' });
+      }
+    });
+  });
+
+  ipcMain.handle('auth:microsoft-cancel', async () => {
+    if (activeMicrosoftServer) {
+      try { activeMicrosoftServer.close(); } catch {}
+      activeMicrosoftServer = null;
+    }
+    if (microsoftTimeout) {
+      clearTimeout(microsoftTimeout);
+      microsoftTimeout = null;
+    }
+    return { success: true };
+  });
+
+  // ============================================================================
+  // 4. COMMON UTILITIES
+  // ============================================================================
+
   ipcMain.handle('auth:open-external', async (_event, payload) => {
     try {
       const url = payload && payload.url;

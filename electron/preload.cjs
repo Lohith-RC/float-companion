@@ -62,6 +62,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.invoke('auth:google-start-flow', { clientId }),
     cancelGoogleOAuth: () =>
       ipcRenderer.invoke('auth:google-cancel'),
+    startMicrosoftOAuth: (clientId) =>
+      ipcRenderer.invoke('auth:microsoft-start-flow', { clientId }),
+    cancelMicrosoftOAuth: () =>
+      ipcRenderer.invoke('auth:microsoft-cancel'),
     openExternal: (url) =>
       ipcRenderer.invoke('auth:open-external', { url }),
   },
