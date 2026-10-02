@@ -32,10 +32,11 @@
 
 ## 📦 Download Desktop App & Live Demo
 
-* **Windows 10/11 Standalone App:** 👉 **[Download FloatCompanion v1.0.0 for Windows (.zip)](https://github.com/Lohith-RC/float-companion/releases/download/v1.0.0/FloatCompanion-v1.0.0-windows-x64.zip)** *(Extract and run `FloatCompanion.exe` — no install required)*
-* **All Releases & Assets:** 👉 **[GitHub Releases Page](https://github.com/Lohith-RC/float-companion/releases)**
-* **In-Browser Web Simulator:** 👉 **[Launch Live Simulator](https://lohith-rc.github.io/float-companion/website/)** *(Test orb kinematics directly in your browser)*
-* **1-Click Live Deploy on Vercel:** 👉 **[Deploy FloatCompanion on Vercel](https://vercel.com/new/clone?repository-url=https://github.com/Lohith-RC/float-companion)** *(Instant live hosting with zero config)*
+* **⚡ Primary Cloud Live Site:** 👉 **[https://cbrn-x.antideploy.com](https://cbrn-x.antideploy.com)** *(Interactive live web simulator & feature tour)*
+* **🐙 GitHub Pages Live Mirror:** 👉 **[https://lohith-rc.github.io/float-companion/](https://lohith-rc.github.io/float-companion/)** *(Direct CDN hosted mirror)*
+* **▲ 1-Click Live Deploy on Vercel:** 👉 **[Deploy FloatCompanion on Vercel](https://vercel.com/new/clone?repository-url=https://github.com/Lohith-RC/float-companion)** *(Instant live hosting with zero config)*
+* **💻 Windows 10/11 Standalone App:** 👉 **[Download FloatCompanion v1.0.0 for Windows (.zip)](https://github.com/Lohith-RC/float-companion/releases/download/v1.0.0/FloatCompanion-v1.0.0-windows-x64.zip)** *(Extract and run `FloatCompanion.exe` — no install required)*
+* **📦 All Releases & Binaries:** 👉 **[GitHub Releases Page](https://github.com/Lohith-RC/float-companion/releases)**
 
 ---
 
@@ -146,6 +147,11 @@ Modern computer workflows are **deeply fragmented**, forcing you into constant c
 * **Microsoft Account OAuth 2.0 (RFC 8252 Loopback with PKCE):** 1-Click "Sign in with Microsoft". Connect any personal `@outlook.com` / `@hotmail.com` or organizational Microsoft 365 account via Microsoft Identity Platform v2.0 (`/common`) and Microsoft Graph API (`/v1.0/me`).
 * **Unified Ambient Identity:** Verified user avatar and badge (`G`, `GH`, or `MS`) in the Tray Header, personalized greetings in the chat pane, and dedicated Connected Accounts settings card.
 * **Hardware-Encrypted DPAPI Vault:** Access tokens are stored using Windows Data Protection API (DPAPI) hardware encryption.
+
+### 10. 🛡️ Zero-Trust AI Data Loss Prevention (DLP) & Token-Bucket Anti-DoS
+* **Client-Side Secret Scrubber:** Automatically detects and redacts AWS keys, OpenAI/Groq keys, GitHub tokens, Slack tokens, private PEM keys, JWTs, and database URI passwords before prompts are transmitted to cloud neural networks.
+* **Prompt Injection Defense:** Encapsulates external screen OCR and clipboard text inside strict XML quarantine boundaries (`<untrusted_context>`), neutralizing indirect injection and jailbreak instructions.
+* **Token-Bucket IPC Rate Limiting:** Hardware-level rate limiting on `os:capture-screen`, `store:set-secure-key`, and `os:launch-app` prevents IPC message bursts, GPU memory thrashing, and DoS attacks.
 
 ---
 
