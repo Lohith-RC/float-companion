@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FloatCompanion — The Autonomous AI Desktop Companion</title>
+  <meta name="description" content="A persistent, transparent floating AI desktop companion for Windows & Mac. Sub-10ms zero-token OS intent routing, focus shield, and local DPAPI hardware encryption." />
+  
+  <!-- Modern Typography & Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Plus Jakarta Sans', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            obsidian: '#070a13',
+            surface: 'rgba(13, 19, 36, 0.75)',
+            accent: '#38bdf8',
+          },
+          animation: {
+            'spin-slow': 'spin 12s linear infinite',
+            'sonar-wave': 'sonar 2.5s cubic-bezier(0, 0.2, 0.8, 1) infinite',
+            'pulse-subtle': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+          },
+          keyframes: {
+            sonar: {
+              '0%': { transform: 'scale(0.95)', opacity: '0.8' },
+              '100%': { transform: 'scale(1.4)', opacity: '0' },
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Doppelrand Glass Surface */
+    .doppelrand {
+      background: rgba(10, 15, 29, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.8), inset 0 1px 1px rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+    }
+    .lens-bezel {
+      background: radial-gradient(circle at 35% 35%, rgba(56, 189, 248, 0.25), rgba(15, 23, 42, 0.95));
+      border: 1.5px solid rgba(56, 189, 248, 0.5);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7), 0 0 35px rgba(56, 189, 248, 0.35), inset 0 1.5px 2px rgba(255, 255, 255, 0.5);
+    }
+  </style>
+</head>
+<body class="bg-[#050811] text-slate-100 font-sans selection:bg-sky-500/30 selection:text-sky-200 overflow-x-hidden antialiased">
+
+  <!-- Ambient Caustic Background Glows -->
+  <div class="fixed inset-0 pointer-events-none overflow-hidden z-0">
+    <div class="absolute -top-40 -left-40 w-96 h-96 bg-sky-500/15 rounded-full blur-[140px]"></div>
+    <div class="absolute top-1/3 -right-40 w-[30rem] h-[30rem] bg-indigo-500/10 rounded-full blur-[160px]"></div>
+    <div class="absolute -bottom-40 left-1/3 w-[32rem] h-[32rem] bg-teal-500/10 rounded-full blur-[160px]"></div>
+  </div>
+
+  <!-- Navigation Bar -->
+  <header class="relative z-50 max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 rounded-2xl bg-gradient-to-tr from-sky-400 via-sky-500 to-indigo-600 p-[1.5px] shadow-[0_0_20px_rgba(56,189,248,0.4)]">
+        <div class="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center">
+          <span class="text-sky-300 font-extrabold text-sm">✦</span>
+        </div>
+      </div>
+      <span class="font-extrabold text-lg tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">
+        FloatCompanion
+      </span>
+      <span class="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full bg-sky-500/10 text-sky-400 border border-sky-400/25">
+        v1.0.0
+      </span>
+    </div>
+
+    <nav class="hidden md:flex items-center gap-8 text-xs font-semibold text-slate-300">
+      <a href="#features" class="hover:text-white transition-colors">Features</a>
+      <a href="#comparison" class="hover:text-white transition-colors">Comparison</a>
+      <a href="#architecture" class="hover:text-white transition-colors">Architecture</a>
+      <a href="#security" class="hover:text-white transition-colors">Security</a>
+    </nav>
+
+    <div class="flex items-center gap-3">
+      <a
+        href="https://github.com/Lohith-RC/float-companion"
+        target="_blank"
+        rel="noreferrer"
+        class="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-slate-200 transition-all active:scale-95 flex items-center gap-1.5"
+      >
+        <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+        <span>GitHub</span>
+      </a>
+      <a
+        href="https://github.com/Lohith-RC/float-companion/releases"
+        class="px-4 py-2 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs transition-all active:scale-95 shadow-lg shadow-sky-500/25"
+      >
+        Download .exe
+      </a>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <main class="relative z-10 max-w-7xl mx-auto px-6 pt-16 pb-28 text-center flex flex-col items-center">
+    <!-- Value Prop Eyebrow Badge -->
+    <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-sky-500/10 border border-sky-400/25 text-sky-300 text-xs font-semibold mb-6 shadow-sm">
+      <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+      <span>Autonomous Desktop AI Companion</span>
+      <span class="text-slate-500 font-mono">•</span>
+      <span class="text-slate-400 font-mono">0-Token Local OS Routing</span>
+    </div>
+
+    <!-- Main Headline -->
+    <h1 class="text-5xl md:text-7xl font-extrabold tracking-tight max-w-4xl leading-[1.1] mb-6">
+      Your Desktop AI. <br />
+      <span class="bg-gradient-to-r from-sky-300 via-teal-300 to-indigo-300 bg-clip-text text-transparent">
+        Sub-10ms. Zero-Token. Total Privacy.
+      </span>
+    </h1>
+
+    <p class="text-base md:text-lg text-slate-400 max-w-2xl leading-relaxed mb-10 font-normal">
+      FloatCompanion is a transparent, floating HUD that lives at your monitor edge. Summon instantly with <code class="font-mono text-sky-300 bg-sky-950/60 px-2 py-0.5 rounded border border-sky-400/30">Ctrl + Shift + Space</code>, command your operating system offline, and shield focus with hardware-encrypted local memory.
+    </p>
+
+    <!-- CTAs -->
+    <div class="flex flex-wrap items-center justify-center gap-4 mb-16">
+      <a
+        href="https://github.com/Lohith-RC/float-companion/releases"
+        class="px-7 py-3.5 rounded-2xl bg-gradient-to-r from-sky-400 via-sky-500 to-indigo-600 text-slate-950 font-extrabold text-sm shadow-xl shadow-sky-500/30 hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
+      >
+        <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.9-1.801"/></svg>
+        <span>Download for Windows (x64)</span>
+      </a>
+      <a
+        href="#simulator"
+        class="px-6 py-3.5 rounded-2xl bg-slate-900/80 hover:bg-slate-800 text-slate-200 border border-white/10 text-sm font-semibold transition-all active:scale-95 flex items-center gap-2"
+      >
+        <span>Test-Drive Web Simulator</span>
+        <span>→</span>
+      </a>
+    </div>
+
+    <!-- Live Performance SLA Ticker -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl w-full text-left">
+      <div class="doppelrand p-4 rounded-2xl">
+        <span class="text-[11px] font-mono text-slate-400 block mb-1">GLOBAL SUMMON SLA</span>
+        <span class="text-2xl font-extrabold font-mono text-sky-300">&lt; 45 ms</span>
+        <span class="text-[10px] text-slate-400 block mt-1">Zero perceptible delay</span>
+      </div>
+      <div class="doppelrand p-4 rounded-2xl">
+        <span class="text-[11px] font-mono text-slate-400 block mb-1">LOCAL INTENT ROUTER</span>
+        <span class="text-2xl font-extrabold font-mono text-emerald-400">&lt; 10 ms</span>
+        <span class="text-[10px] text-slate-400 block mt-1">Offline, 0 tokens billed</span>
+      </div>
+      <div class="doppelrand p-4 rounded-2xl">
+        <span class="text-[11px] font-mono text-slate-400 block mb-1">GROQ STREAMING TIME</span>
+        <span class="text-2xl font-extrabold font-mono text-indigo-300">&lt; 350 ms</span>
+        <span class="text-[10px] text-slate-400 block mt-1">Llama-3.3 70B tokens</span>
+      </div>
+      <div class="doppelrand p-4 rounded-2xl">
+        <span class="text-[11px] font-mono text-slate-400 block mb-1">PRIVACY & STORAGE</span>
+        <span class="text-2xl font-extrabold font-mono text-teal-300">100% Local</span>
+        <span class="text-[10px] text-slate-400 block mt-1">Windows DPAPI Encrypted</span>
+      </div>
+    </div>
+  </main>
+
+  <!-- Interactive In-Browser Orb Simulator Section -->
+  <section id="simulator" class="relative z-10 py-20 border-t border-b border-white/[0.08] bg-slate-950/60">
+    <div class="max-w-5xl mx-auto px-6 text-center">
+      <div class="inline-block px-3 py-1 rounded-full bg-sky-500/10 border border-sky-400/20 text-sky-400 text-xs font-mono mb-3">
+        INTERACTIVE DEMO
+      </div>
+      <h2 class="text-3xl md:text-5xl font-extrabold tracking-tight mb-4">
+        Experience FloatCompanion in Your Browser
+      </h2>
+      <p class="text-slate-400 text-sm max-w-xl mx-auto mb-12">
+        Click the floating orb below to expand the tray, type instant commands like <code class="text-sky-300 font-mono">ram</code> or <code class="text-sky-300 font-mono">time</code>, and test the zero-token routing engine.
+      </p>
+
+      <!-- Web Simulator Canvas Mockup -->
+      <div class="relative w-full max-w-2xl mx-auto h-[480px] rounded-3xl border border-white/15 bg-gradient-to-b from-slate-900/90 to-slate-950/95 overflow-hidden shadow-2xl flex flex-col items-center justify-center p-6 select-none">
+        
+        <!-- Mock Desktop Backdrop Elements -->
+        <div class="absolute top-4 left-6 flex items-center gap-2">
+          <div class="w-3 h-3 rounded-full bg-red-500/60"></div>
+          <div class="w-3 h-3 rounded-full bg-amber-500/60"></div>
+          <div class="w-3 h-3 rounded-full bg-emerald-500/60"></div>
+          <span class="text-[11px] font-mono text-slate-500 ml-2">Windows 11 Desktop Screen</span>
+        </div>
+
+        <!-- Simulated Floating Orb in the Mockup -->
+        <div id="mock-orb" class="cursor-pointer group flex flex-col items-center gap-3 transition-transform hover:scale-105 active:scale-95">
+          <div class="relative w-20 h-20 flex items-center justify-center">
+            <!-- Sonar wave -->
+            <div class="absolute inset-0 rounded-full bg-sky-400/30 animate-sonar-wave pointer-events-none"></div>
+            <!-- Ambient glow -->
+            <div class="absolute -inset-1 rounded-full bg-gradient-to-tr from-sky-400 to-indigo-500 blur-xl opacity-60 group-hover:opacity-100 transition-opacity"></div>
+            <!-- Outer lens rim -->
+            <div class="relative w-full h-full rounded-full lens-bezel p-1 flex items-center justify-center shadow-2xl">
+              <div class="w-full h-full rounded-full bg-slate-950 flex items-center justify-center border border-white/20">
+                <span class="text-sky-300 font-extrabold text-xl group-hover:rotate-12 transition-transform">✦</span>
+              </div>
+            </div>
+            <!-- Status pip -->
+            <span class="absolute top-0 right-0 w-3 h-3 rounded-full bg-emerald-400 border-2 border-slate-950"></span>
+          </div>
+          <span class="text-xs font-semibold text-slate-300 bg-slate-900/80 px-3 py-1 rounded-full border border-white/10">
+            Click to Expand Tray
+          </span>
+        </div>
+
+        <!-- Simulated Expanded Tray (Hidden initially) -->
+        <div id="mock-tray" class="hidden absolute inset-4 rounded-2xl doppelrand p-4 flex flex-col justify-between text-left">
+          <div class="flex items-center justify-between pb-3 border-b border-white/10">
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <span class="text-sky-300 font-bold text-xs">✦ FloatCompanion</span>
+              <span class="text-[9px] px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 font-mono">DLP SHIELD ON</span>
+              <span class="text-[9px] px-1.5 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/25 font-mono">OAUTH TRIO</span>
+            </div>
+            <button id="mock-collapse-btn" class="p-1 text-slate-400 hover:text-white text-xs">✕</button>
+          </div>
+
+          <!-- Mock Message Area -->
+          <div id="mock-chat-area" class="flex-1 overflow-y-auto py-3 space-y-2 text-xs">
+            <div class="bg-slate-900/90 text-slate-200 p-2.5 rounded-xl border border-white/10 max-w-[85%]">
+              👋 <strong>FloatCompanion v1.0.0 is online.</strong> Try typing <code class="text-sky-300 font-mono">ram</code> or <code class="text-sky-300 font-mono">time</code> below.
+              <div class="mt-2 pt-1 border-t border-white/10 text-[10px] text-slate-400 flex items-center gap-1">
+                <span class="text-emerald-400">🛡️</span> Zero-Trust DLP Active · Google, GitHub & Microsoft OAuth
+              </div>
+            </div>
+          </div>
+
+          <!-- Mock Input Form -->
+          <form id="mock-form" class="flex items-center gap-2 bg-slate-900/90 border border-white/15 rounded-xl px-3 py-2">
+            <input
+              id="mock-input"
+              type="text"
+              placeholder="Type 'ram', 'time', or ask anything..."
+              class="flex-1 bg-transparent text-xs text-white placeholder-slate-500 focus:outline-none"
+            />
+            <button type="submit" class="px-3 py-1 bg-sky-600 text-white rounded-lg text-xs font-semibold">
+              Run
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Competitive Comparison Table -->
+  <section id="comparison" class="relative z-10 py-24 max-w-7xl mx-auto px-6">
+    <div class="text-center mb-16">
+      <div class="inline-block px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-400/20 text-indigo-300 text-xs font-mono mb-3">
+        HEAD-TO-HEAD MATRIX
+      </div>
+      <h2 class="text-3xl md:text-5xl font-extrabold tracking-tight mb-4">
+        Built to Win Against Live Competitors
+      </h2>
+      <p class="text-slate-400 text-sm max-w-xl mx-auto">
+        Compare FloatCompanion with existing open-source and commercial solutions.
+      </p>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-xs doppelrand rounded-3xl border-collapse overflow-hidden">
+        <thead>
+          <tr class="border-b border-white/10 bg-slate-900/60 text-slate-400 uppercase tracking-wider font-mono">
+            <th class="p-4 pl-6">Feature / Capability</th>
+            <th class="p-4 text-sky-400 font-bold bg-sky-950/20 border-l border-r border-sky-400/30">FloatCompanion</th>
+            <th class="p-4">FloatGPT</th>
+            <th class="p-4">Raycast</th>
+            <th class="p-4 pr-6">ChatGPT Desktop</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-white/5 font-medium text-slate-300">
+          <tr>
+            <td class="p-4 pl-6 font-semibold text-white">Global Summon Latency</td>
+            <td class="p-4 bg-sky-950/20 border-l border-r border-sky-400/30 font-bold text-sky-300 font-mono">&lt; 45 ms</td>
+            <td class="p-4 text-slate-400">~ 500 ms</td>
+            <td class="p-4 font-mono">&lt; 30 ms</td>
+            <td class="p-4 text-slate-400">~ 300 ms</td>
+          </tr>
+          <tr>
+            <td class="p-4 pl-6 font-semibold text-white">Offline Zero-Token OS Routing</td>
+            <td class="p-4 bg-sky-950/20 border-l border-r border-sky-400/30 font-bold text-emerald-400">✓ Yes (&lt;10ms)</td>
+            <td class="p-4 text-red-400">✗ No (API required)</td>
+            <td class="p-4 text-emerald-400">✓ Yes</td>
+            <td class="p-4 text-red-400">✗ No</td>
+          </tr>
+          <tr>
+            <td class="p-4 pl-6 font-semibold text-white">Win32 Focus Shield & Distraction Guardian</td>
+            <td class="p-4 bg-sky-950/20 border-l border-r border-sky-400/30 font-bold text-emerald-400">✓ Built-in (3s poller)</td>
+            <td class="p-4 text-red-400">✗ No</td>
+            <td class="p-4 text-red-400">✗ No</td>
+            <td class="p-4 text-red-400">✗ No</td>
+          </tr>
+          <tr>
+            <td class="p-4 pl-6 font-semibold text-white">Screen Annotation Canvas (Ctrl+Shift+C)</td>
+            <td class="p-4 bg-sky-950/20 border-l border-r border-sky-400/30 font-bold text-emerald-400">✓ Fullscreen Draw</td>
+            <td class="p-4 text-red-400">✗ No</td>
+            <td class="p-4 text-red-400">✗ No</td>
+            <td class="p-4 text-red-400">✗ No</td>
+          </tr>
+          <tr>
+            <td class="p-4 pl-6 font-semibold text-white">Local Hardware Encryption</td>
+            <td class="p-4 bg-sky-950/20 border-l border-r border-sky-400/30 font-bold text-emerald-400">✓ Windows DPAPI</td>
+            <td class="p-4 text-slate-500">Plaintext</td>
+            <td class="p-4 text-emerald-400">✓ Native Keychain</td>
+            <td class="p-4 text-slate-500">Cloud Storage</td>
+          </tr>
+          <tr>
+            <td class="p-4 pl-6 font-semibold text-white">Multi-Model Auto Failover</td>
+            <td class="p-4 bg-sky-950/20 border-l border-r border-sky-400/30 font-bold text-emerald-400">✓ Groq + Gemini + Ollama</td>
+            <td class="p-4 text-slate-400">OpenAI only</td>
+            <td class="p-4 text-slate-400">Subscription add-on</td>
+            <td class="p-4 text-slate-400">OpenAI only</td>
+          </tr>
+          <tr>
+            <td class="p-4 pl-6 font-semibold text-white">License & Privacy</td>
+            <td class="p-4 bg-sky-950/20 border-l border-r border-sky-400/30 font-bold text-sky-300">Open Source (MIT)</td>
+            <td class="p-4 text-slate-400">Open Source</td>
+            <td class="p-4 text-slate-400">Proprietary Freemium</td>
+            <td class="p-4 text-slate-400">Closed Commercial</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Interactive Simulator Logic -->
+  <script>
+    const mockOrb = document.getElementById('mock-orb');
+    const mockTray = document.getElementById('mock-tray');
+    const mockCollapseBtn = document.getElementById('mock-collapse-btn');
+    const mockForm = document.getElementById('mock-form');
+    const mockInput = document.getElementById('mock-input');
+    const mockChatArea = document.getElementById('mock-chat-area');
+
+    mockOrb.addEventListener('click', () => {
+      mockOrb.classList.add('hidden');
+      mockTray.classList.remove('hidden');
+      mockInput.focus();
+    });
+
+    mockCollapseBtn.addEventListener('click', () => {
+      mockTray.classList.add('hidden');
+      mockOrb.classList.remove('hidden');
+    });
+
+    mockForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const val = mockInput.value.trim().toLowerCase();
+      if (!val) return;
+
+      // Append user msg
+      const userBubble = document.createElement('div');
+      userBubble.className = 'bg-sky-600 text-white p-2.5 rounded-xl max-w-[85%] ml-auto text-xs';
+      userBubble.textContent = mockInput.value;
+      mockChatArea.appendChild(userBubble);
+      mockInput.value = '';
+
+      // Instant Zero-token responses
+      setTimeout(() => {
+        const replyBubble = document.createElement('div');
+        replyBubble.className = 'bg-slate-900/90 text-slate-200 p-2.5 rounded-xl border border-white/10 max-w-[85%] text-xs';
+
+        if (val === 'ram' || val.includes('memory')) {
+          replyBubble.innerHTML = '📊 <strong>Native Hardware Query (&lt;5ms):</strong><br/>Memory In Use: <code>7.82 GB / 16.00 GB</code> (48%)<br/><span class="text-emerald-400 text-[10px] font-mono font-bold">⚡ Zero-Token Deterministic Routing</span>';
+        } else if (val === 'time' || val.includes('date')) {
+          const now = new Date();
+          replyBubble.innerHTML = '🕒 <strong>Local Time:</strong> <code>' + now.toLocaleTimeString() + '</code><br/><span class="text-emerald-400 text-[10px] font-mono font-bold">⚡ Zero-Token Deterministic Routing</span>';
+        } else {
+          replyBubble.innerHTML = '🤖 <strong>Groq Llama-3.3-70B:</strong><br/>FloatCompanion synthesizes instant answers with under 350ms streaming latency directly on your desktop.';
+        }
+        mockChatArea.appendChild(replyBubble);
+        mockChatArea.scrollTop = mockChatArea.scrollHeight;
+      }, 80);
+    });
+  </script>
+
+  <!-- Footer -->
+  <footer class="relative z-10 border-t border-white/10 py-12 text-center text-xs text-slate-500">
+    <div class="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
+      <p>© 2026 FloatCompanion Project. Licensed under MIT. 100% Local-First.</p>
+      <div class="flex items-center gap-6">
+        <a href="https://github.com/Lohith-RC/float-companion" class="hover:text-slate-300">GitHub Repository</a>
+        <a href="https://github.com/Lohith-RC/float-companion/releases" class="hover:text-slate-300">Releases</a>
+        <a href="https://github.com/Lohith-RC/float-companion/blob/main/SECURITY.md" class="hover:text-slate-300">Security Policy</a>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>
