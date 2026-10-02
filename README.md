@@ -15,6 +15,8 @@
 
 <br />
 
+[💡 What Is It?](#-what-am-i-building-the-core-identity) •
+[🔥 Why Build It?](#-why-am-i-building-it-the-pain-it-kills) •
 [✨ Features](#-core-capabilities--the-8-superpowers) •
 [⚡ Architecture](#-system-architecture) •
 [⚔️ Comparison Matrix](#️-competitive-head-to-head) •
@@ -34,17 +36,43 @@ Open the **Live In-Browser Simulator & Marketing Landing Page**:
 
 ---
 
-## 🌟 Why FloatCompanion?
+## 💡 What Am I Building? (The Core Identity)
 
-Traditional AI assistants are passive browser tabs that require constant context switching, manual copy-pasting, and expensive API calls for basic questions. **FloatCompanion** transforms how developers and power users work:
+> **In One Sentence:** FloatCompanion is an ambient desktop copilot that provides instant AI assistance and zero-latency OS automation right over your active workspace, while actively defending your focus against distractions.
 
-1. **Always At Your Fingertips:** Summonable anywhere via `Ctrl + Shift + Space` with zero desktop clutter.
-2. **Sub-10ms Zero-Token OS Automation:** Answers system time, RAM consumption, drive space, and app launching locally with zero API latency and zero token billing.
-3. **Multimodal Desktop Screen Vision:** Captures active desktop context in 1-click and feeds high-resolution JPEG buffers directly to Gemini 2.5 Flash for instant error debugging and code explanation.
-4. **Hands-Free Voice Dictation:** Integrated Web Speech API speech-to-text with real-time audio waveform indicators.
-5. **Win32 Persistent Attention Guardian:** Lightweight native foreground window poller detects active distraction windows without process churn, protecting deep-work sprints.
-6. **Hardware-Backed DPAPI Encryption:** Stored API keys are encrypted at rest using Windows DPAPI (`safeStorage`) hardware keys, ensuring zero plaintext secrets on disk.
-7. **Multi-Drive Telemetry Dashboard:** Real-time visual monitoring for primary and secondary storage volumes with health indicators.
+FloatCompanion is **not another browser tab you forget about**. It is a lightweight, 68×68px transparent physical presence on your screen that stays with you across every tool you use—hovering effortlessly over your IDE, terminal, CAD software, or browser.
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                       THE 3 JOBS FLOATCOMPANION DOES                        │
+├─────────────────────────┬─────────────────────────┬─────────────────────────┤
+│ 1. ZERO CONTEXT-SWITCH  │ 2. LOCAL-FIRST OS       │ 3. PROACTIVE FLOW       │
+│    AI ASSISTANCE        │    AUTOMATION           │    GUARDIAN             │
+├─────────────────────────┼─────────────────────────┼─────────────────────────┤
+│ • 1-click screen vision │ • Sub-10ms native time, │ • Win32 foreground      │
+│ • Hands-free dictation  │   RAM & disk telemetry  │   window interception   │
+│ • Sub-300ms neural chat │ • Whitelisted app launch│ • Acoustic warning      │
+│   over your active code │ • 0 API tokens consumed │   crimson alert pulses  │
+└─────────────────────────┴─────────────────────────┴─────────────────────────┘
+```
+
+---
+
+## 🔥 Why Am I Building It? (The Pain It Kills)
+
+Modern computer workflows are **deeply fragmented**, forcing you into constant context switching that destroys deep work:
+
+### 1. Eliminating the "Alt-Tab Browser Trap"
+* **The Normal Way:** You hit a bug or syntax issue while writing code. You Alt-Tab over to Chrome to ask ChatGPT or Claude. While the page loads, you see an unread YouTube notification or an open social tab. 25 minutes evaporate into a rabbit hole, and your cognitive flow state is obliterated.
+* **The FloatCompanion Way:** Tap `Ctrl + Shift + Space` or click the floating orb. The HUD glides open right over your code editor. Snap your screen with `📷` or speak with `🎙️`, receive instant streaming answers, and press `Esc`. **You never leave your workspace, and your attention stays unbroken.**
+
+### 2. Bridging the Gap Between AI and Your Physical Computer
+* Most AI tools are trapped in the cloud—they don't know your machine's hardware status, can't launch executables, and charge tokens for basic queries.
+* FloatCompanion is **hybrid local-first**: asking for memory (`ram`), drive health (`disk`), or app launching (`open vscode`) executes natively on your operating system in `<10ms` with **zero token billing and zero network latency**.
+
+### 3. Ending the Era of "Passive Timers"
+* Phone Pomodoro timers and web countdowns are completely passive—you can easily ignore them and browse Reddit anyway.
+* FloatCompanion is an **active guardian**. Using native Win32 foreground window APIs (`user32.dll`), it actively monitors your active app. If you drift into a distraction (YouTube, Reddit, Twitter, Netflix) during an active sprint, the orb pulses crimson and triggers an acoustic alarm to snap you back into flow.
 
 ---
 
@@ -83,7 +111,7 @@ Traditional AI assistants are passive browser tabs that require constant context
 
 ### 4. 👁️ 1-Click Desktop Screen Vision
 * Tap the `📷` camera button in the tray to invoke Electron's `desktopCapturer`.
-* Encodes the primary display into a high-density JPEG buffer (`max 1920x1080`).
+* Encodes the active display into a high-density JPEG buffer (`max 1920x1080`).
 * Seamlessly attaches thumbnail previews to the chat bar for instant visual query answering.
 
 ### 5. 🎙️ Hands-Free Voice Dictation
@@ -93,7 +121,7 @@ Traditional AI assistants are passive browser tabs that require constant context
 ### 6. 🛡️ Persistent Win32 Attention Guardian
 * Compiles a single persistent background `FocusTracker` using Windows `user32.dll` (`GetForegroundWindow` / `GetWindowThreadProcessId`).
 * Zero process spawn churn (eliminates spawning 1,200 PowerShell processes/hour).
-* Ignores minimized background apps; only alerts when the user actively shifts focus to blacklisted distraction windows.
+* Ignores minimized background apps and FloatCompanion itself; only alerts when the user actively shifts focus to blacklisted distraction windows.
 * Records total distraction counts per sprint and saves records to local IndexedDB.
 
 ### 7. 🔒 Hardware-Encrypted Credential Vault
@@ -142,7 +170,7 @@ flowchart TD
         Kernel --> Win32[systemHandlers.cjs]
         Win32 --> Stats[Hardware Telemetry: RAM / Multi-Drive / Uptime]
         Win32 --> AppLaunch[Executable Launcher: code, notepad, chrome]
-        Win32 --> Capturer[desktopCapturer: Screen Snapshot]
+        Win32 --> Capturer[desktopCapturer: Screen Snapshot Active Monitor]
         Win32 --> Tracker[Persistent Win32 FocusTracker: user32.dll]
         Win32 --> Vault[secureStore.cjs: Windows DPAPI Encryption]
     end
@@ -230,7 +258,8 @@ To activate live AI responses and multimodal vision:
 1. Launch FloatCompanion (`npm run dev`).
 2. Click the **Settings ⚙️** icon in the header.
 3. Paste your free **[Groq API Key](https://console.groq.com/keys)** (for Llama-3.3-70B) or **[Google Gemini Key](https://aistudio.google.com/app/apikey)** (for Gemini 2.5 Flash Vision).
-4. Keys are automatically encrypted with Windows DPAPI and stored safely.
+4. Select your preferred engine (Groq, Gemini, or Local Ollama).
+5. Keys are automatically encrypted with Windows DPAPI and stored safely.
 
 *(Alternatively, copy `.env.example` to `.env` and fill in `VITE_GROQ_API_KEY` and `VITE_GEMINI_API_KEY`)*.
 
