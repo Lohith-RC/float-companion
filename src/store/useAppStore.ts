@@ -26,9 +26,11 @@ interface AppState {
   activeFocusTask: string;
   distractionAlert: { active: boolean; title: string; keyword: string } | null;
   sessionDistractionsCount: number;
+  pendingPrompt: string;
 
   setMode: (mode: 'orb' | 'tray') => void;
   setActiveTab: (tab: 'chat' | 'tasks' | 'stats' | 'focus') => void;
+  setPendingPrompt: (prompt: string) => void;
   addMessage: (msg: Omit<ChatMessage, 'id' | 'timestamp'>) => void;
   clearMessages: () => void;
   addTask: (title: string, durationMins?: number) => void;
@@ -64,9 +66,11 @@ export const useAppStore = create<AppState>((set, get) => ({
   activeFocusTask: '',
   distractionAlert: null,
   sessionDistractionsCount: 0,
+  pendingPrompt: '',
 
   setMode: (mode) => set({ mode }),
   setActiveTab: (activeTab) => set({ activeTab }),
+  setPendingPrompt: (pendingPrompt) => set({ pendingPrompt }),
   addMessage: (msg) =>
     set((state) => ({
       messages: [

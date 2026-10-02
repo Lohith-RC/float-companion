@@ -88,6 +88,19 @@ export default function App() {
       });
     }
 
+    let unsubscribeInject: (() => void) | undefined;
+    if (window.electronAPI?.chat?.onInjectPrompt) {
+      unsubscribeInject = window.electronAPI.chat.onInjectPrompt((data) => {
+        sounds.playChime();
+        setMode('tray');
+        useAppStore.getState().setActiveTab('chat');
+        useAppStore.getState().setPendingPrompt(data.prompt);
+        if (window.electronAPI?.window?.expand) {
+          window.electronAPI.window.expand();
+        }
+      });
+    }
+
     // Global in-app shortcuts
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -125,6 +138,7 @@ export default function App() {
     return () => {
       unsubscribeDistraction?.();
       unsubscribeCleared?.();
+      unsubscribeInject?.();
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [mode, canvasActive, isFocusing, setDistractionAlert, startFocus, stopFocus]);

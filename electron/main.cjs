@@ -1,4 +1,5 @@
-const { app, BrowserWindow, ipcMain, globalShortcut, screen, Tray, Menu, nativeImage, shell, session } = require('electron');
+const { app, BrowserWindow, ipcMain, globalShortcut, screen, Tray, Menu, nativeImage, shell, session, clipboard } = require('electron');
+const { exec } = require('child_process');
 const path = require('path');
 const { validateResizePayload, validateSecureKeyPayload } = require('./ipcValidator.cjs');
 const { registerSystemHandlers, stopFocusMonitoring } = require('./systemHandlers.cjs');
@@ -147,6 +148,37 @@ function toggleWindowMode() {
   }
 }
 
+// ponytail: SendKeys ^c selection capture; native C++ Windows Accessibility UIAutomation API if foreground apps block synthetic keystrokes
+function triggerHighlightToAsk() {
+  if (!mainWindow) return;
+
+  const captureAndExpand = () => {
+    let text = '';
+    try {
+      text = clipboard.readText().trim();
+    } catch {}
+
+    expandToTray();
+    if (text) {
+      mainWindow.webContents.send('chat:inject-prompt', {
+        text,
+        prompt: `Explain this code or text:\n\n\`\`\`\n${text.slice(0, 3000)}\n\`\`\``,
+      });
+    }
+  };
+
+  if (process.platform === 'win32') {
+    exec(
+      `powershell -NoProfile -Command "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SendKeys]::SendWait('^c')"`,
+      () => {
+        setTimeout(captureAndExpand, 80);
+      }
+    );
+  } else {
+    captureAndExpand();
+  }
+}
+
 // App Lifecycle
 app.whenReady().then(() => {
   secureStore = new SecureStore();
@@ -173,6 +205,11 @@ app.whenReady().then(() => {
   // Global Summon Hotkey: Ctrl+Shift+Space
   globalShortcut.register('CommandOrControl+Shift+Space', () => {
     toggleWindowMode();
+  });
+
+  // Global Highlight-to-Ask Hotkey: Ctrl+Shift+E
+  globalShortcut.register('CommandOrControl+Shift+E', () => {
+    triggerHighlightToAsk();
   });
 
   // Safe tray setup

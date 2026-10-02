@@ -131,6 +131,7 @@ export const ChatInputBar: FC<ChatInputBarProps> = ({
 
   const suggestions = [
     { label: '📷 Analyze Screen', action: onCaptureScreen },
+    { label: '💡 Explain (Ctrl+Shift+E)', prompt: 'Explain the active code or selection in detail.' },
     { label: '⚡ RAM Status', prompt: 'ram' },
     { label: '🕒 Time', prompt: 'time' },
     { label: '🚀 Open VS Code', prompt: 'open vscode' },

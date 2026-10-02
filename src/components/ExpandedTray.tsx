@@ -58,6 +58,8 @@ export const ExpandedTray: FC<ExpandedTrayProps> = ({ onCollapse, onOpenCanvas }
     activeFocusTask,
     distractionAlert,
     setDistractionAlert,
+    pendingPrompt,
+    setPendingPrompt,
   } = useAppStore();
 
   const [inputPrompt, setInputPrompt] = useState('');
@@ -70,6 +72,14 @@ export const ExpandedTray: FC<ExpandedTrayProps> = ({ onCollapse, onOpenCanvas }
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const chatBottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (pendingPrompt) {
+      setInputPrompt(pendingPrompt);
+      setActiveTab('chat');
+      setPendingPrompt('');
+    }
+  }, [pendingPrompt, setActiveTab, setPendingPrompt]);
 
   useEffect(() => {
     loadSettings().then((s) => {

@@ -10,6 +10,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
     setIgnoreMouse: (ignore, forward = false) =>
       ipcRenderer.invoke('window:set-ignore-mouse', { ignore, forward }),
   },
+  chat: {
+    onInjectPrompt: (callback) => {
+      const listener = (_event, data) => callback(data);
+      ipcRenderer.on('chat:inject-prompt', listener);
+      return () => ipcRenderer.removeListener('chat:inject-prompt', listener);
+    },
+  },
   os: {
     getStats: () => ipcRenderer.invoke('os:get-system-stats'),
     launchApp: (target) => ipcRenderer.invoke('os:launch-app', { target }),

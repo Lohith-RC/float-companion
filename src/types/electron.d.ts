@@ -62,6 +62,9 @@ export interface FloatCompanionAPI {
     close: () => Promise<void>;
     setIgnoreMouse: (ignore: boolean, forward?: boolean) => Promise<{ success: boolean }>;
   };
+  chat?: {
+    onInjectPrompt: (callback: (data: { text: string; prompt: string }) => void) => () => void;
+  };
   os: {
     getStats: () => Promise<SystemStatsResponse>;
     launchApp: (target: string) => Promise<LaunchAppResponse>;

@@ -207,6 +207,7 @@ flowchart TD
 | Shortcut | Action | Scope |
 | :--- | :--- | :--- |
 | <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Space</kbd> | **Summon / Collapse FloatCompanion** | Global (Anywhere in OS) |
+| <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>E</kbd> | **Highlight-to-Ask (Instant Explain Active Selection)** | Global (Anywhere in OS) |
 | <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>F</kbd> | **Instant 25m Focus Sprint Toggle** | Global (Anywhere in OS) |
 | <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>C</kbd> | **Toggle Fullscreen Transparent Canvas** | Global (Anywhere in OS) |
 | <kbd>Escape</kbd> | **Collapse Tray / Canvas to Orb** | In-App |
