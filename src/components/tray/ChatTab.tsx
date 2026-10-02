@@ -1,6 +1,7 @@
 import { FC, RefObject } from 'react';
 import { Copy, Check, Terminal, Zap, RotateCw, Sparkles, Keyboard, Lightbulb } from 'lucide-react';
 import { ChatMessage } from '../../store/useAppStore';
+import { useAuthStore } from '../../store/useAuthStore';
 
 interface ChatTabProps {
   messages: ChatMessage[];
@@ -91,17 +92,37 @@ function renderFormattedContent(rawText: string) {
 /**
  * WelcomeCard — Branded onboarding card shown when chat is empty.
  */
-const WelcomeCard: FC = () => (
-  <div className="flex flex-col items-center text-center px-4 py-6 space-y-4 animate-fade-in">
-    <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-sky-500/25 via-indigo-500/20 to-teal-400/20 border border-sky-400/40 flex items-center justify-center shadow-[0_0_20px_rgba(56,189,248,0.2)]">
-      <Sparkles className="w-6 h-6 text-sky-300" />
-    </div>
-    <div>
-      <h2 className="text-sm font-bold text-white mb-0.5">FloatCompanion</h2>
-      <p className="text-[11px] text-slate-400 max-w-[260px] leading-relaxed">
-        Your ambient AI copilot. Ask anything, snap your screen, or use zero-token commands below.
-      </p>
-    </div>
+const WelcomeCard: FC = () => {
+  const { user } = useAuthStore();
+
+  return (
+    <div className="flex flex-col items-center text-center px-4 py-6 space-y-4 animate-fade-in">
+      {user ? (
+        <div className="relative">
+          <img
+            src={user.avatarUrl}
+            alt={user.login}
+            className="w-12 h-12 rounded-2xl border-2 border-sky-400/50 object-cover shadow-[0_0_20px_rgba(56,189,248,0.25)]"
+          />
+          <span className="absolute -bottom-1 -right-1 px-1.5 py-0.2 bg-emerald-500 text-[8px] font-bold text-slate-950 rounded-full border border-slate-900">
+            GH
+          </span>
+        </div>
+      ) : (
+        <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-sky-500/25 via-indigo-500/20 to-teal-400/20 border border-sky-400/40 flex items-center justify-center shadow-[0_0_20px_rgba(56,189,248,0.2)]">
+          <Sparkles className="w-6 h-6 text-sky-300" />
+        </div>
+      )}
+      <div>
+        <h2 className="text-sm font-bold text-white mb-0.5">
+          {user ? `Welcome back, @${user.login} 👋` : 'FloatCompanion'}
+        </h2>
+        <p className="text-[11px] text-slate-400 max-w-[260px] leading-relaxed">
+          {user?.bio
+            ? user.bio.slice(0, 80)
+            : 'Your ambient AI copilot. Ask anything, snap your screen, or use zero-token commands below.'}
+        </p>
+      </div>
     <div className="grid grid-cols-2 gap-2 w-full max-w-[280px]">
       <div className="p-2 bg-slate-900/70 rounded-xl border border-white/[0.08] text-left">
         <div className="flex items-center gap-1.5 mb-1">
@@ -125,6 +146,7 @@ const WelcomeCard: FC = () => (
     </div>
   </div>
 );
+};
 
 /**
  * ChatTab

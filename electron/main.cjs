@@ -3,6 +3,7 @@ const { exec } = require('child_process');
 const path = require('path');
 const { validateResizePayload, validateSecureKeyPayload } = require('./ipcValidator.cjs');
 const { registerSystemHandlers, stopFocusMonitoring } = require('./systemHandlers.cjs');
+const { registerAuthHandlers } = require('./authHandlers.cjs');
 const SecureStore = require('./secureStore.cjs');
 
 let mainWindow = null;
@@ -184,6 +185,7 @@ app.whenReady().then(() => {
   secureStore = new SecureStore();
   createMainWindow();
   registerSystemHandlers(() => mainWindow);
+  registerAuthHandlers();
 
   // Explicit permission allowlist: allow audioCapture/media only for trusted local app origin
   session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {

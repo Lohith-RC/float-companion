@@ -51,4 +51,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
     setSecureKey: (keyName, keyValue) =>
       ipcRenderer.invoke('store:set-secure-key', { keyName, keyValue }),
   },
+  auth: {
+    startGithubDeviceFlow: (clientId) =>
+      ipcRenderer.invoke('auth:github-start-device-flow', { clientId }),
+    pollGithubToken: (clientId, deviceCode) =>
+      ipcRenderer.invoke('auth:github-poll-token', { clientId, deviceCode }),
+    getGithubProfile: (token) =>
+      ipcRenderer.invoke('auth:github-get-profile', { token }),
+    openExternal: (url) =>
+      ipcRenderer.invoke('auth:open-external', { url }),
+  },
 });

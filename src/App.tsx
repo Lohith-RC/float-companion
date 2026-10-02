@@ -5,9 +5,11 @@ import { FloatingOrb } from './components/FloatingOrb';
 import { ExpandedTray } from './components/ExpandedTray';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { ToastContainer } from './components/common/ToastContainer';
+import { GitHubAuthModal } from './components/common/GitHubAuthModal';
 import { sounds } from './services/soundEffects';
 import { loadSavedMessages, loadSavedTasks, recordFocusSession } from './db/indexedDB';
 import { DistractionEvent } from './types/electron';
+import { useAuthStore } from './store/useAuthStore';
 
 // Code-split heavy full-screen canvas overlay
 const ScreenCanvas = lazy(() =>
@@ -31,6 +33,8 @@ export default function App() {
         useAppStore.setState({ tasks: savedTasks });
       }
     });
+
+    useAuthStore.getState().init();
   }, []);
 
   // Persistent background focus sprint ticker (persists across Orb and Tray modes)
@@ -192,6 +196,7 @@ export default function App() {
         )}
 
         {mode === 'tray' && <ToastContainer />}
+        <GitHubAuthModal />
       </main>
     </ErrorBoundary>
   );

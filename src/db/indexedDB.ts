@@ -8,6 +8,16 @@ export interface UserSettings {
   defaultModel: 'groq' | 'gemini' | 'ollama' | 'openai';
   soundEnabled: boolean;
   distractionBlacklist: string[];
+  githubUser?: {
+    login: string;
+    name: string;
+    avatarUrl: string;
+    htmlUrl: string;
+    bio: string;
+    publicRepos: number;
+    email: string;
+  } | null;
+  githubClientId?: string;
 }
 
 export interface FocusSessionRecord {

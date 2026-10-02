@@ -89,6 +89,43 @@ export interface FloatCompanionAPI {
     getSecureKey: (keyName: 'groq' | 'gemini' | 'openai' | string) => Promise<{ key: string | null }>;
     setSecureKey: (keyName: string, keyValue: string) => Promise<{ success: boolean }>;
   };
+  auth?: {
+    startGithubDeviceFlow: (clientId?: string) => Promise<{
+      success: boolean;
+      deviceCode?: string;
+      userCode?: string;
+      verificationUri?: string;
+      expiresIn?: number;
+      interval?: number;
+      clientId?: string;
+      error?: string;
+    }>;
+    pollGithubToken: (clientId: string, deviceCode: string) => Promise<{
+      success: boolean;
+      accessToken?: string;
+      tokenType?: string;
+      scope?: string;
+      pending?: boolean;
+      slowDown?: boolean;
+      error?: string;
+    }>;
+    getGithubProfile: (token: string) => Promise<{
+      success: boolean;
+      profile?: GitHubUserProfile;
+      error?: string;
+    }>;
+    openExternal: (url: string) => Promise<{ success: boolean; error?: string }>;
+  };
+}
+
+export interface GitHubUserProfile {
+  login: string;
+  name: string;
+  avatarUrl: string;
+  htmlUrl: string;
+  bio: string;
+  publicRepos: number;
+  email: string;
 }
 
 declare global {

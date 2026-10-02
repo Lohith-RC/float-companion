@@ -137,6 +137,12 @@ Modern computer workflows are **deeply fragmented**, forcing you into constant c
 * Zero `any` types across the entire TypeScript codebase.
 * Strict modular architecture ensuring all components remain **under 400 lines of code**.
 
+### 9. 🐙 Free Native GitHub OAuth & Developer Profile (RFC 8628)
+* **100% Free Forever:** Built on official GitHub OAuth 2.0 Device Authorization Grant—no backend servers, external proxies, or subscriptions required.
+* **1-Click Seamless Login:** Generates a secure one-time verification code, opens GitHub in your browser, and auto-detects approval in the background.
+* **Personalized Experience:** Displays your verified GitHub avatar, `@handle`, public repository count, and bio in the Tray Header and onboarding view.
+* **DPAPI Vault Security:** OAuth bearer tokens are protected with Windows Data Protection API (DPAPI) hardware encryption. Also supports direct Personal Access Tokens (PAT).
+
 ---
 
 ## ⚔️ Competitive Head-to-Head
